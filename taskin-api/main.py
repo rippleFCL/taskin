@@ -37,7 +37,7 @@ def com_tasks():
     return data
 
 @app.delete("/tasks/{task_id}")
-def delete_category(task_id: str):
+def delete_task(task_id: str):
     for task in data:
         if task.name == task_id:
             data.remove(task)
@@ -45,21 +45,17 @@ def delete_category(task_id: str):
 
     return {"success": False}
 #
-# @app.put("/tasks/{category_id}")
-# def update_category(category_id: str, name: str, tasks: list[Task]):
-#     for cat in data:
-#         if cat.name == category_id:
-#             cat.name = name
-#             cat.tasks = tasks
-#             return {"success": True}
-#
-#     return {"success": False}
-#
-#
-# @app.post("/tasks")
-# def add_category(category: Category):
-#     for cat in data:
-#         if cat.name == category.name:
-#             return {"success": False}
-#     data.append(category)
-#     return {"success": True}
+@app.put("/tasks/{task_id}")
+def update_task(task_id: str, status: StatusEnum, category: str):
+    for cat in data:
+        if cat.name == task_id:
+            cat.status = status
+            cat.category = category
+            return {"success": True}
+
+    return {"success": False}
+
+@app.post("/tasks")
+def add_category(task: Task):
+    data.append(task)
+    return {"success": True}
