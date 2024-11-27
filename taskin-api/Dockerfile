@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM docker.io/python:3.13.0-slim-bullseye AS poetry-locker
 
 WORKDIR /work
@@ -15,6 +16,8 @@ WORKDIR /
 COPY --from=poetry-locker /work/requirements.txt /
 COPY --from=poetry-locker /work/requirements-dev.txt /
 
+WORKDIR /app
+
 RUN apt-get update && \
     apt-get install -y --no-install-recommends build-essential pkg-config libpq-dev && \
     pip install --no-cache-dir -r /requirements.txt && \
@@ -23,12 +26,9 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /tmp/* /var/lib/apt/lists/* /var/tmp/ && \
     adduser --system --no-create-home --uid 1000 --group --home /app ripple && \
-    mkdir -p /app/static && \
-    chown -R ripple:ripple /app/static
+    chown -R ripple:ripple /app
 
-WORKDIR /app
-
-COPY ./ /app
+COPY --chown=1000:1000 --chmod=750 ./ /app
 
 USER 1000
 
