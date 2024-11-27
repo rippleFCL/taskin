@@ -43,5 +43,6 @@ jobs:
             ghcr.io/ripplefcl/taskin-backend:${{ steps.ev.outputs.sha }},
             ghcr.io/ripplefcl/taskin-backend:latest
           platforms: linux/amd64,linux/arm64
+          context: taskin-api
           build-args: |
             GIT_BUILD_HASH=${{ steps.ev.outputs.sha }}
