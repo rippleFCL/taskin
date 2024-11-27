@@ -1,1 +1,1 @@
-from .tasks import Task, StatusEnum
+from .tasks import Task, StatusEnum, Category

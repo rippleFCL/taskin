@@ -1,12 +1,25 @@
-from pydantic import BaseModel
 from enum import Enum
+from uuid import UUID, uuid4
+
+from sqlmodel import Field, SQLModel, Relationship
+
 
 class StatusEnum(str, Enum):
     todo = "todo"
     comp = "comp"
     in_prog = "in_prog"
 
-class Task(BaseModel):
-    name: str
-    status: StatusEnum
-    category: str
+
+class Category(SQLModel, table=True):
+    id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
+    name: str = Field(index=True)
+
+    tasks: list["Task"] = Relationship(back_populates="category")
+
+
+class Task(SQLModel, table=True):
+    id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
+    name: str = Field(index=True)
+    status: StatusEnum = Field(default=StatusEnum.todo, index=True)
+    category_id: UUID = Field(default=None, foreign_key="category.id")
+    category: Category = Relationship(back_populates="tasks")
