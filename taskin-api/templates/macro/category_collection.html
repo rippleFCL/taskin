@@ -1,0 +1,23 @@
+{% from "macro/category.html" import category %}
+
+{% macro category_collection(categories, collection_name, collection_id) %}
+    <div class="row pt-5">
+        <div class="col">
+            <h1>{{ collection_name }}</h1>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col">
+            <hr>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col">
+            <div class="accordion" id="accordionPanelsStayOpenExample">
+                {% for catdata in categories %}
+                    {{ category(catdata, loop.index0, collection_id) }}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+{% endmacro %}
