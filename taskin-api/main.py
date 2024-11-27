@@ -36,14 +36,14 @@ data = [
 def com_tasks():
     return data
 
-# @app.delete("/tasks/{category_id}")
-# def delete_category(category_id: str):
-#     for cat in data:
-#         if cat.name == category_id:
-#             data.remove(cat)
-#             return {"success": True}
-#
-#     return {"success": False}
+@app.delete("/tasks/{task_id}")
+def delete_category(task_id: str):
+    for task in data:
+        if task.name == task_id:
+            data.remove(task)
+            return {"success": True}
+
+    return {"success": False}
 #
 # @app.put("/tasks/{category_id}")
 # def update_category(category_id: str, name: str, tasks: list[Task]):

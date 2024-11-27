@@ -1,0 +1,5 @@
+services:
+  backend:
+    image: ghcr.io/ripplefcl/taskin-backend:latest
+    ports:
+      - 8080:8080
