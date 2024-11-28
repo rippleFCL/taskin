@@ -21,6 +21,7 @@ class CategorySet(SQLModel):
     name: str
 
 class CategoryResponse(SQLModel):
+    id: UUID
     name: str
     tasks: list["Task"]
 
