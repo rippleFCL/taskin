@@ -1,5 +1,9 @@
 services:
   backend:
-    image: ghcr.io/ripplefcl/taskin-backend:latest
+    build:
+      context: ./taskin-api/
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./taskin-api/:/app
     ports:
       - 8080:8080

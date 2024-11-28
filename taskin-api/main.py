@@ -8,19 +8,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import create_engine, Session, SQLModel, select
 import logging
 
-logger = logging.getLogger("fastapi")
-logger.info("test")
+logger = logging.getLogger("uvicorn.error")
 app = FastAPI()
-print("yay")
 
 class DevLogger(APIRoute):
     def get_route_handler(self) -> Callable:
         original_route_handler = super().get_route_handler()
 
         async def custom_route_handler(request: Request) -> Response:
-            print(f"Request: {request.method} - {request.url} body: \n {await request.body()}")
+            logger.info(f"Request: {request.method} - {request.url} body: \n {await request.body()}")
             response: Response = await original_route_handler(request)
-            print(f"Response: {response.status_code} - body: \n {response.body}")
+            logger.info(f"Response: {response.status_code} - body: \n {response.body}")
             return response
 
         return custom_route_handler
@@ -32,7 +30,6 @@ sqlite_url = f"sqlite:///{sqlite_file_name}"
 
 connect_args = {"check_same_thread": False}
 engine = create_engine(sqlite_url, connect_args=connect_args)
-
 
 def get_session():
     with Session(engine) as session:
