@@ -43,7 +43,7 @@ def on_startup():
     create_db_and_tables()
 
 
-@app.get("/tasks")
+@app.get("/tasks", operation_id="get_tasks")
 def read_tasks(
     session: SessionDep,
     offset: int = 0,
@@ -53,7 +53,7 @@ def read_tasks(
     return tasks
 
 
-@app.post("/tasks")
+@app.post("/tasks", operation_id="create_task")
 def create_task(task: TaskSet, session: SessionDep) -> Task:
     db_task = Task.model_validate(task)
     session.add(db_task)
@@ -62,7 +62,7 @@ def create_task(task: TaskSet, session: SessionDep) -> Task:
     return db_task
 
 
-@app.delete("/tasks/{task_id}")
+@app.delete("/tasks/{task_id}", operation_id="delete_task")
 def delete_task(task_id: str, session: SessionDep):
     task = session.get(Task, task_id)
     if not task:
@@ -72,7 +72,7 @@ def delete_task(task_id: str, session: SessionDep):
     return {"deleted": True}
 
 
-@app.put("/tasks/{task_id}")
+@app.put("/tasks/{task_id}", operation_id="update_task")
 def update_task(task_id: UUID, new_task: TaskSet, session: SessionDep):
     task = session.get(Task, task_id)
     if not task:
@@ -84,7 +84,7 @@ def update_task(task_id: UUID, new_task: TaskSet, session: SessionDep):
     return task
 
 
-@app.get("/categories")
+@app.get("/categories", operation_id="get_categories")
 def read_categories(
     session: SessionDep,
     offset: int = 0,
@@ -94,7 +94,7 @@ def read_categories(
     return categories
 
 
-@app.post("/categories")
+@app.post("/categories", operation_id="create_category")
 def create_category(category: CategorySet, session: SessionDep) -> Category:
     db_category = Category.model_validate(category)
     session.add(db_category)
@@ -103,7 +103,7 @@ def create_category(category: CategorySet, session: SessionDep) -> Category:
     return db_category
 
 
-@app.delete("/categories/{category_id}")
+@app.delete("/categories/{category_id}", operation_id="delete_category")
 def delete_category(category_id: str, session: SessionDep):
     category = session.get(Category, category_id)
     if not category:
@@ -114,7 +114,7 @@ def delete_category(category_id: str, session: SessionDep):
     return {"deleted": True}
 
 
-@app.put("/categories/{category_id}")
+@app.put("/categories/{category_id}", operation_id="update_category")
 def update_category(category_id: str, new_category: CategorySet, session: SessionDep):
     category = session.get(Category, category_id)
     if not category:
