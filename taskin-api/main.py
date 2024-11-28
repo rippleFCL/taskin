@@ -1,13 +1,30 @@
 from uuid import UUID
 from annotated_types import T
-from fastapi import FastAPI, Depends, HTTPException, Query
-from typing import Annotated, Sequence
+from fastapi import FastAPI, Depends, HTTPException, Query, Request, Response
+from fastapi.routing import APIRoute
+from typing import Annotated, Sequence, Callable
 from models import Task, Category, TaskSet, CategorySet, CategoryResponse, TaskResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import create_engine, Session, SQLModel, select
+import logging
 
+logger = logging.getLogger("fastapi")
+logger.info("test")
 app = FastAPI()
 
+class DevLogger(APIRoute):
+    def get_route_handler(self) -> Callable:
+        original_route_handler = super().get_route_handler()
+
+        async def custom_route_handler(request: Request) -> Response:
+            print(f"Request: {request.method} - {request.url} body: \n {await request.body()}")
+            response: Response = await original_route_handler(request)
+            print(f"Response: {response.status_code} - body: \n {response.body}")
+            return response
+
+        return custom_route_handler
+
+app.router.route_class = DevLogger
 
 sqlite_file_name = "database.db"
 sqlite_url = f"sqlite:///{sqlite_file_name}"
@@ -30,6 +47,8 @@ SessionDep = Annotated[Session, Depends(get_session)]
 
 origins = ["http://localhost", "http://localhost:5173"]
 
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -37,6 +56,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
 
 
 @app.on_event("startup")
