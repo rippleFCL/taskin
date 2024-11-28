@@ -4,6 +4,7 @@ import Home from './pages/Home'
 import { ITodo } from './types'
 import { client } from './client/sdk.gen'
 import { getTasks } from './client/sdk.gen'
+import { TaskSet } from './client/types.gen'
 import { createClient } from '@hey-api/client-fetch'
 import { OuterContainer } from './styles'
 
@@ -55,10 +56,14 @@ const App = () => {
 
   const createTodo = (todo: ITodo) => {
     setTodos([...todos, todo]);
-
+    let body: TaskSet = {
+      "name": todo.name,
+      "category_id": todo.category_id,
+      "status": todo.status
+    }
     apiClient.post({
       url: '/tasks',
-      body: todo as unknown as Record<string, unknown>,
+      body: body as unknown as Record<string, unknown>,
       headers: {
         Authorization: '<token>',
       }
@@ -82,7 +87,7 @@ const App = () => {
         <Routes>
           <Route path="/" element={
             <Home todos={todos} setTodos={setTodos} createTodo={createTodo} />
-            
+
           } />
           {/* <Route path="/create" element={<TodoForm />} /> */}
           {/* <Route path="/:id" element={<TodoForm />} /> */}

@@ -9,8 +9,10 @@ export interface ICategory {
 }
 
 export interface ITodo {
+    id: string;
     name: string;
-    status: StatusEnum | string;
+    status: StatusEnum;
+    category_id: string;
     category: ICategory;
 }
 

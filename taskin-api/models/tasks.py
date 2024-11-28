@@ -37,6 +37,8 @@ class TaskSet(SQLModel):
     category_id: UUID
 
 class TaskResponse(SQLModel):
+    id: UUID
     name: str
     status: StatusEnum
+    category_id: UUID
     category: CategoryResponse
