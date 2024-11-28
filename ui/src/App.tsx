@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router'
 import Home from './pages/Home'
 import { ITodo } from './types'
 import { client } from './client/sdk.gen'
-import { comTasksTasksGet } from './client/sdk.gen'
+import { getTasks } from './client/sdk.gen'
 import { createClient } from '@hey-api/client-fetch'
 import { OuterContainer } from './styles'
 
@@ -25,7 +25,7 @@ const App = () => {
   const [todos, setTodos] = useState<ITodo[]>([]);
 
   useEffect(() => {
-    comTasksTasksGet({
+    getTasks({
       client: apiClient,
       headers: {
         Authorization: 'Bearer <token>',
