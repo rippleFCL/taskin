@@ -6,6 +6,7 @@ export enum StatusEnum {
 
 export interface ICategory {
     name: string;
+    id: string;
 }
 
 export interface ITodo {

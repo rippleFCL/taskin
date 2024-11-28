@@ -85,7 +85,7 @@ def update_task(task_id: UUID, new_task: TaskSet, session: SessionDep) -> Task:
     return task
 
 
-@app.get("/categories", operation_id="get_categories")
+@app.get("/categories", operation_id="get_categories", response_model=Sequence[CategoryResponse])
 def read_categories(
     session: SessionDep,
     offset: int = 0,
@@ -95,7 +95,7 @@ def read_categories(
     return categories
 
 
-@app.post("/categories", operation_id="create_category")
+@app.post("/categories", operation_id="create_category", response_model=CategoryResponse)
 def create_category(category: CategorySet, session: SessionDep) -> Category:
     db_category = Category.model_validate(category)
     session.add(db_category)
@@ -115,7 +115,7 @@ def delete_category(category_id: str, session: SessionDep):
     return {"deleted": True}
 
 
-@app.put("/categories/{category_id}", operation_id="update_category")
+@app.put("/categories/{category_id}", operation_id="update_category", response_model=CategoryResponse)
 def update_category(category_id: str, new_category: CategorySet, session: SessionDep):
     category = session.get(Category, category_id)
     if not category:

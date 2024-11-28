@@ -22,7 +22,7 @@ class CategorySet(SQLModel):
 
 class CategoryResponse(SQLModel):
     name: str
-
+    tasks: list["Task"]
 
 class Task(SQLModel, table=True):
     id: UUID | None = Field(default_factory=uuid4, primary_key=True, index=True)
@@ -41,4 +41,4 @@ class TaskResponse(SQLModel):
     name: str
     status: StatusEnum
     category_id: UUID
-    category: CategoryResponse
+    category: Category

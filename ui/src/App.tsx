@@ -54,16 +54,11 @@ const App = () => {
     return <div>Something went wrong: {hasError}</div>
   }
 
-  const createTodo = (todo: ITodo) => {
-    setTodos([...todos, todo]);
-    let body: TaskSet = {
-      "name": todo.name,
-      "category_id": todo.category_id,
-      "status": todo.status
-    }
+  const createTodo = (todo: TaskSet) => {
+
     apiClient.post({
       url: '/tasks',
-      body: body as unknown as Record<string, unknown>,
+      body: todo,
       headers: {
         Authorization: '<token>',
       }
@@ -73,6 +68,7 @@ const App = () => {
         console.error(error);
       } else {
         console.info(data);
+        setTodos([...todos, data as unknown as ITodo]);
 
       }
     }).catch(error => {

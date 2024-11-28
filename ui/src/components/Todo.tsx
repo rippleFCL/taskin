@@ -2,10 +2,11 @@ import React, { useEffect, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
 import { Button, Input, Select } from '@mui/material';
 import { ITodo, TodoMode } from '../types';
+import { TaskSet } from '../client/types.gen';
 
 interface TodoProps {
   todo: ITodo | null;
-  createTodo: (todo: ITodo) => void
+  createTodo: (todo: TaskSet) => void
   setTodos: React.Dispatch<React.SetStateAction<ITodo[]>>;
   mode?: TodoMode;
 }
@@ -44,8 +45,8 @@ const Todo: React.FC<TodoProps> = (props) => {
 
     createTodo({
       name: name,
-      category: category,
-      status: status
+      status: status,
+      category_id: category.id
     });
   }
 
@@ -67,8 +68,11 @@ const Todo: React.FC<TodoProps> = (props) => {
         {renderControls(() => {
           validateAndUpdateTodo({
             name: todoForm.current?.querySelector('input')?.value ?? '',
-            category: todoForm.current?.querySelector('select')?.value ?? '',
-            status: 'todo'
+            status: todoForm.current?.querySelector('select')?.value ?? '',
+            category: {
+              id: '299eb044-3126-4fae-99c6-9c67df2c9813',
+              name: "test"
+            }
           });
           !todo ? setMode(TodoMode.edit) : setMode(TodoMode.view)
         }, !todo ? TodoMode.edit : TodoMode.view )}
