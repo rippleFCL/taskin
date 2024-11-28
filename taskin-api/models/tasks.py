@@ -29,17 +29,17 @@ class Task(SQLModel, table=True):
     id: UUID | None = Field(default_factory=uuid4, primary_key=True, index=True)
     name: str = Field(index=True)
     status: StatusEnum = Field(default=StatusEnum.todo, index=True)
-    category_id: UUID = Field(default=None, foreign_key="category.id")
+    category_id: UUID | None = Field(default=None, foreign_key="category.id", nullable=True)
     category: Category = Relationship(back_populates="tasks")
 
 class TaskSet(SQLModel):
     name: str
     status: StatusEnum
-    category_id: UUID
+    category_id: UUID | None = None
 
 class TaskResponse(SQLModel):
     id: UUID
     name: str
     status: StatusEnum
-    category_id: UUID
-    category: Category
+    category_id: UUID | None
+    category: Category | None = None
