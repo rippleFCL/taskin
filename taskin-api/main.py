@@ -1,7 +1,8 @@
 from uuid import UUID
+from annotated_types import T
 from fastapi import FastAPI, Depends, HTTPException, Query
 from typing import Annotated, Sequence
-from models import Task, Category, TaskSet, CategorySet
+from models import Task, Category, TaskSet, CategorySet, CategoryResponse, TaskResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import create_engine, Session, SQLModel, select
 
@@ -43,7 +44,7 @@ def on_startup():
     create_db_and_tables()
 
 
-@app.get("/tasks", operation_id="get_tasks")
+@app.get("/tasks", operation_id="get_tasks", response_model=Sequence[TaskResponse])
 def read_tasks(
     session: SessionDep,
     offset: int = 0,
@@ -53,7 +54,7 @@ def read_tasks(
     return tasks
 
 
-@app.post("/tasks", operation_id="create_task")
+@app.post("/tasks", operation_id="create_task", response_model=TaskResponse)
 def create_task(task: TaskSet, session: SessionDep) -> Task:
     db_task = Task.model_validate(task)
     session.add(db_task)
@@ -72,8 +73,8 @@ def delete_task(task_id: str, session: SessionDep):
     return {"deleted": True}
 
 
-@app.put("/tasks/{task_id}", operation_id="update_task")
-def update_task(task_id: UUID, new_task: TaskSet, session: SessionDep):
+@app.put("/tasks/{task_id}", operation_id="update_task", response_model=TaskResponse)
+def update_task(task_id: UUID, new_task: TaskSet, session: SessionDep) -> Task:
     task = session.get(Task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")

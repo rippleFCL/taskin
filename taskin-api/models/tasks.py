@@ -1,4 +1,5 @@
 from enum import Enum
+from unicodedata import category
 from uuid import UUID, uuid4
 
 from sqlmodel import Field, SQLModel, Relationship
@@ -19,6 +20,10 @@ class Category(SQLModel, table=True):
 class CategorySet(SQLModel):
     name: str
 
+class CategoryResponse(SQLModel):
+    name: str
+
+
 class Task(SQLModel, table=True):
     id: UUID | None = Field(default_factory=uuid4, primary_key=True, index=True)
     name: str = Field(index=True)
@@ -31,3 +36,7 @@ class TaskSet(SQLModel):
     status: StatusEnum
     category_id: UUID
 
+class TaskResponse(SQLModel):
+    name: str
+    status: StatusEnum
+    category: CategoryResponse

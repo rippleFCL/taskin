@@ -79,7 +79,7 @@ const Todo: React.FC<TodoProps> = (props) => {
   return (
     <Box p={1} m={1}>
       <h1>{todo.name ? todo.name : 'Your Todo'}</h1>
-      <p>{todo.category ? todo.category : 'Category'}</p>
+      <p>{todo.category.name ? todo.category.name : 'Category'}</p>
       {renderControls(() => {
         validateAndUpdateTodo(todo);
         setMode(TodoMode.view);
