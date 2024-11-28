@@ -11,6 +11,7 @@ import logging
 logger = logging.getLogger("fastapi")
 logger.info("test")
 app = FastAPI()
+print("yay")
 
 class DevLogger(APIRoute):
     def get_route_handler(self) -> Callable:
