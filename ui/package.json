@@ -11,6 +11,10 @@
     "generate-client": "openapi-ts --input http://localhost:8080/openapi.json --output ./src/client --client @hey-api/client-fetch"
   },
   "dependencies": {
+    "@emotion/react": "^11.13.5",
+    "@emotion/styled": "^11.13.5",
+    "@hey-api/client-fetch": "^0.5.0",
+    "@mui/material": "^6.1.8",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router": "^7.0.1"

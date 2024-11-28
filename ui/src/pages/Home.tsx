@@ -1,41 +1,44 @@
 import React, { useState, useEffect, ReactElement } from 'react'
+import Todo from '../components/Todo'
+import { ITodo, TodoMode } from '../types'
+import Box from '@mui/material/Box';
+import Grid from '@mui/material/Grid2';
+import styled from '@emotion/styled'
+
+const GridItem = styled(Grid)`
+background-color: #f9f9f9;
+padding: 10px;
+border-radius: 5px;
+margin: 10px;
+border: 1px solid #e0e0e0;
+box-shadow: 0 0 10px #e0e0e0;
+
+`
 
 interface HomePropTypes {
-  todos: TodoItem[]
+  todos: ITodo[]
+  setTodos: React.Dispatch<React.SetStateAction<ITodo[]>>
+  createTodo: (todo: ITodo) => void
 }
-
-enum StatusEnum {
-  todo = "todo",
-  comp = "comp",
-  in_prog = "in_prog"
-}
-
-interface TodoItem {
-  name: string
-  status: StatusEnum
-  category: string
-}
-
 
 const Home = (props: HomePropTypes): ReactElement => {
-  console.log(props)
+  const { todos, setTodos, createTodo } = props
+
   return (
-    <div>
-      {props.todos.map((category, index) => (
-        <div key={index}>
-          <h2>{category.name}</h2>
-          <button>Edit</button>
-          <ul>
-            {category.tasks.map((item, idx) => (
-              <li key={idx}>
-                {item.name} - {item.status}
-                <button>Edit</button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))}
-    </div>
+    <Box>
+      <Grid>
+        {todos.map((todo: ITodo, index: number) => (
+          <GridItem>
+            <Todo key={index} todo={todo} setTodos={setTodos} createTodo={createTodo} mode={TodoMode.view} />
+          </GridItem>
+        ))}
+
+        <GridItem>
+          <Todo todo={null} setTodos={setTodos} createTodo={createTodo} mode={TodoMode.edit}/>
+        </GridItem>
+
+      </Grid>
+    </Box>
   )
 }
 
