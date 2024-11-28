@@ -1,6 +1,7 @@
+from uuid import UUID
 from fastapi import FastAPI, Depends, HTTPException, Query
 from typing import Annotated, Sequence
-from models import Task, Category
+from models import Task, Category, TaskSet, CategorySet
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import create_engine, Session, SQLModel, select
 
@@ -53,11 +54,12 @@ def read_tasks(
 
 
 @app.post("/tasks")
-def create_task(task: Task, session: SessionDep) -> Task:
-    session.add(task)
+def create_task(task: TaskSet, session: SessionDep) -> Task:
+    db_task = Task.model_validate(task)
+    session.add(db_task)
     session.commit()
-    session.refresh(task)
-    return task
+    session.refresh(db_task)
+    return db_task
 
 
 @app.delete("/tasks/{task_id}")
@@ -67,18 +69,19 @@ def delete_task(task_id: str, session: SessionDep):
         raise HTTPException(status_code=404, detail="Task not found")
     session.delete(task)
     session.commit()
-    return {"ok": True}
+    return {"deleted": True}
 
 
 @app.put("/tasks/{task_id}")
-def update_task(task_id: str, new_task: Task, session: SessionDep):
+def update_task(task_id: UUID, new_task: TaskSet, session: SessionDep):
     task = session.get(Task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     task.sqlmodel_update(new_task.model_dump(exclude_unset=True))
     session.add(task)
     session.commit()
-    return {"success": True}
+    session.refresh(task)
+    return task
 
 
 @app.get("/categories")
@@ -92,11 +95,12 @@ def read_categories(
 
 
 @app.post("/categories")
-def create_category(category: Category, session: SessionDep) -> Category:
-    session.add(category)
+def create_category(category: CategorySet, session: SessionDep) -> Category:
+    db_category = Category.model_validate(category)
+    session.add(db_category)
     session.commit()
-    session.refresh(category)
-    return category
+    session.refresh(db_category)
+    return db_category
 
 
 @app.delete("/categories/{category_id}")
@@ -106,15 +110,17 @@ def delete_category(category_id: str, session: SessionDep):
         raise HTTPException(status_code=404, detail="category not found")
     session.delete(category)
     session.commit()
-    return {"ok": True}
+
+    return {"deleted": True}
 
 
 @app.put("/categories/{category_id}")
-def update_category(category_id: str, new_category: Category, session: SessionDep):
+def update_category(category_id: str, new_category: CategorySet, session: SessionDep):
     category = session.get(Category, category_id)
     if not category:
         raise HTTPException(status_code=404, detail="category not found")
     category.sqlmodel_update(new_category.model_dump(exclude_unset=True))
     session.add(category)
     session.commit()
-    return {"success": True}
+    session.refresh(category)
+    return category
