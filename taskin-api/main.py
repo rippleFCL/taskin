@@ -3,7 +3,7 @@ from annotated_types import T
 from fastapi import FastAPI, Depends, HTTPException, Query, Request, Response
 from fastapi.routing import APIRoute
 from typing import Annotated, Sequence, Callable
-from models import Task, Category, TaskSet, CategorySet, CategoryResponse, TaskResponse
+from models import Task, Category, TaskSet, CategorySet, CategoryResponse, TaskResponse, StatusEnum
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import create_engine, Session, SQLModel, select
 import logging
@@ -81,6 +81,18 @@ def create_task(task: TaskSet, session: SessionDep) -> Task:
     session.refresh(db_task)
     return db_task
 
+@app.get("/tasks/by-status/{status}", operation_id="get_task_by_status", response_model=Sequence[TaskResponse])
+def get_task_by_status(status: StatusEnum, session: SessionDep) -> Sequence[Task]:
+    task = session.exec(select(Task).where(Task.status == status)).all()
+    return task
+
+@app.get("/tasks/{task_id}", operation_id="get_task", response_model=TaskResponse)
+def get_task(task_id: str, session: SessionDep):
+    task = session.get(Task, task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return task
+
 
 @app.delete("/tasks/{task_id}", operation_id="delete_task")
 def delete_task(task_id: str, session: SessionDep):
@@ -114,8 +126,18 @@ def read_categories(
     return categories
 
 
+@app.get("/categories/{category_id}", operation_id="get_category", response_model=CategoryResponse)
+def get_category(category_id: str, session: SessionDep):
+    category = session.get(Category, category_id)
+    if not category:
+        raise HTTPException(status_code=404, detail="category not found")
+    return category
+
 @app.post("/categories", operation_id="create_category")
 def create_category(category: CategorySet, session: SessionDep) -> Category:
+    existing = session.exec(select(Category).where(Category.name == category.name))
+    if existing:
+        raise HTTPException(status_code=409, detail="Category already exists")
     db_category = Category.model_validate(category)
     session.add(db_category)
     session.commit()
