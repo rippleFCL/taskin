@@ -54,7 +54,7 @@ def read_tasks(
     return tasks
 
 
-@app.post("/tasks", operation_id="create_task", response_model=TaskResponse)
+@app.post("/tasks", operation_id="create_task")
 def create_task(task: TaskSet, session: SessionDep) -> Task:
     db_task = Task.model_validate(task)
     session.add(db_task)
@@ -95,7 +95,7 @@ def read_categories(
     return categories
 
 
-@app.post("/categories", operation_id="create_category", response_model=CategoryResponse)
+@app.post("/categories", operation_id="create_category")
 def create_category(category: CategorySet, session: SessionDep) -> Category:
     db_category = Category.model_validate(category)
     session.add(db_category)
