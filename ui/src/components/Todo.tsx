@@ -18,7 +18,7 @@ const Todo: React.FC<TodoProps> = (props) => {
   const renderControls = (save: Function, forceMode?: TodoMode) => {
     if (mode === TodoMode.edit) {
       return <>
-        <Button variant="outlined" color="primary" onClick={() => setMode(TodoMode.view)}>Cancel</Button>
+        {!todo ? <></> : <Button variant="outlined" color="primary" onClick={() => setMode(TodoMode.view)}>Cancel</Button>}
         <Button variant="outlined" color="primary" onClick={() => save()}>Save</Button>
       </>
     } else if (mode === TodoMode.view) {
@@ -70,8 +70,8 @@ const Todo: React.FC<TodoProps> = (props) => {
             category: todoForm.current?.querySelector('select')?.value ?? '',
             status: 'todo'
           });
-          setMode(TodoMode.view);
-        }, !todo ? TodoMode.view : TodoMode.edit)}
+          !todo ? setMode(TodoMode.edit) : setMode(TodoMode.view)
+        }, !todo ? TodoMode.edit : TodoMode.view )}
       </Box>
     );
   }
