@@ -11,9 +11,10 @@ margin: 10px;
 border: 1px solid #e0e0e0;
 box-shadow: 0 0 10px #e0e0e0;
 `
+
 const OuterContainer = styled(Container)`
-    padding: 10px;
-    `
+padding: 10px;
+`
 
 export {
     Box,
