@@ -14,32 +14,42 @@ class StatusEnum(str, Enum):
 class Category(SQLModel, table=True):
     id: UUID | None = Field(default_factory=uuid4, primary_key=True, index=True)
     name: str = Field(index=True)
-
     tasks: list["Task"] = Relationship(back_populates="category")
 
-class CategorySet(SQLModel):
-    name: str
 
-class CategoryResponse(SQLModel):
+class TCategory(SQLModel):
+    id: UUID | None = None
+    name: str
+    tasks: list["TTask"] | None = None
+
+class CategoryBase(SQLModel):
     id: UUID
     name: str
-    tasks: list["Task"]
+
+class CategoryFull(CategoryBase):
+    tasks: list["TaskBase"] | None = None
+
+
 
 class Task(SQLModel, table=True):
-    id: UUID | None = Field(default_factory=uuid4, primary_key=True, index=True)
+    id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
     name: str = Field(index=True)
     status: StatusEnum = Field(default=StatusEnum.todo, index=True)
     category_id: UUID | None = Field(default=None, foreign_key="category.id", nullable=True)
     category: Category = Relationship(back_populates="tasks")
 
-class TaskSet(SQLModel):
+class TaskBase(SQLModel):
+    id: UUID
     name: str
     status: StatusEnum
     category_id: UUID | None = None
 
-class TaskResponse(SQLModel):
-    id: UUID
+class TaskFull(TaskBase):
+    category: CategoryBase | None = None
+
+class TTask(SQLModel):
+    id: UUID | None
     name: str
     status: StatusEnum
-    category_id: UUID | None
-    category: Category | None = None
+    category_id: UUID | None = None
+    category: TCategory | None = None
