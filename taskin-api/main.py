@@ -3,7 +3,7 @@ from annotated_types import T
 from fastapi import FastAPI, Depends, HTTPException, Query, Request, Response
 from fastapi.routing import APIRoute
 from typing import Annotated, Sequence, Callable
-from models import Task, Category, TTask, TCategory, TaskFull, CategoryFull, StatusEnum
+from models import Task, Category, TTask, TCategory, TaskFull, CategoryFull, StatusEnum, TaskBase
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import create_engine, Session, SQLModel, select
 import logging
@@ -74,16 +74,25 @@ def read_tasks(
     limit: Annotated[int, Query(le=100)] = 100,
 ) -> Sequence[TaskFull]:
     tasks = session.exec(select(Task).offset(offset).limit(limit)).all()
-    print(tasks[0].model_dump())
     return [cast_task_model(task) for task in tasks]
 
+# @app.get("/tasks/uncategorised", operation_id="get_uncategorised_tasks", response_model=Sequence[TTask])
+# def get_uncategorised_tasks(
+#     session: SessionDep,
+#     offset: int = 0,
+#     limit: Annotated[int, Query(le=100)] = 100,
+# ) -> Sequence[TaskFull]:
+#
+#     return [cast_task_model(task) for task in tasks]
 
 @app.post("/tasks", operation_id="create_task", response_model=TTask)
 def create_task(task: TTask, session: SessionDep) -> TaskFull:
-    db_task = Task.model_validate(task)
+    db_task = Task.model_validate(task.model_dump(exclude_unset=True, exclude_none=True))
+
     session.add(db_task)
     session.commit()
     session.refresh(db_task)
+    print(db_task.model_dump())
     return cast_task_model(db_task)
 
 @app.get("/tasks/by-status/{status}", operation_id="get_task_by_status", response_model=Sequence[TTask])
@@ -113,7 +122,7 @@ def update_task(task_id: UUID, new_task: TTask, session: SessionDep) -> TaskFull
     task = session.get(Task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
-    task.sqlmodel_update(new_task.model_dump(exclude_unset=True))
+    task.sqlmodel_update(new_task.model_dump(exclude_unset=True, exclude_none=True))
     session.add(task)
     session.commit()
     session.refresh(task)
@@ -127,7 +136,10 @@ def read_categories(
     limit: Annotated[int, Query(le=100)] = 100,
 ) -> Sequence[CategoryFull]:
     categories = session.exec(select(Category).offset(offset).limit(limit)).all()
-    return [cast_category_model(category) for category in categories]
+    tasks = session.exec(select(Task).where(Task.category_id == None).offset(offset).limit(limit)).all()
+    tasks_full =  [TaskBase.model_validate(task.model_dump()) for task in tasks]
+
+    return [cast_category_model(category) for category in categories] + [CategoryFull(name="Uncategorised", tasks=tasks_full)]
 
 
 @app.get("/categories/{category_id}", operation_id="get_category", response_model=TCategory)
@@ -143,7 +155,7 @@ def create_category(category: TCategory, session: SessionDep) -> CategoryFull:
     existing = session.exec(select(Category).where(Category.name == category.name))
     if existing:
         raise HTTPException(status_code=409, detail="Category already exists")
-    db_category = Category.model_validate(category)
+    db_category = Category.model_validate(category.model_dump(exclude_unset=True, exclude_none=True))
     session.add(db_category)
     session.commit()
     session.refresh(db_category)
@@ -166,7 +178,7 @@ def update_category(category_id: str, new_category: TCategory, session: SessionD
     category = session.get(Category, category_id)
     if not category:
         raise HTTPException(status_code=404, detail="category not found")
-    category.sqlmodel_update(new_category.model_dump(exclude_unset=True))
+    category.sqlmodel_update(new_category.model_dump(exclude_unset=True, exclude_none=True))
     session.add(category)
     session.commit()
     session.refresh(category)

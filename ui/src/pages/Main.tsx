@@ -1,43 +1,48 @@
-import { CategoryResponse, GetCategoriesResponse, Task, TaskSet } from '../client/types.gen';
+import { GetCategoriesResponse, TTask, TCategory } from '../client/types.gen';
 import { GridItem } from '../styles';
 import { ReactElement } from 'react'
 import { TaskMode } from '../types';
 import Box from '@mui/material/Box';
 import Grid from '@mui/material/Grid2';
 import TaskComponent from '../components/Task';
+import { create } from '@mui/material/styles/createTransitions';
 
 interface MainPropTypes {
-  categories: GetCategoriesResponse
-  createTask: (task: TaskSet) => void
-  updateTask: (task: TaskSet) => void
+  categories: TCategory[],
+  createTask: (task: TTask | null, newTask: TTask) => void
+  updateTask: (task: TTask | null, newTask: TTask) => void
 }
 
 const Home = (props: MainPropTypes): ReactElement => {
-  const { categories } = props
+  const { categories, createTask, updateTask } = props
 
   return (
     <Box>
-      {categories.map((category: CategoryResponse) => (
+      {categories.map((category: TCategory) => (
         <GridItem key={category.name}> {/*<GridItem key={category.uuid}>*/}
           <h1>{category.name}</h1>
-          {category.tasks.map((task: Task) => (
+          {(category.tasks ? category.tasks : []).map((task: TTask) => (
             <GridItem key={task.id}>
-              {task.name}
               <TaskComponent
                 key={task.id}
                 task={task}
-                updateTask={(t: TaskSet) => props.updateTask(t)}
-                createTask={(t: TaskSet) => props.createTask(t)}
+                updateTask={updateTask}
+                createTask={createTask}
                 mode={TaskMode.view}
               />
             </GridItem>
           ))}
         </GridItem>
       ))}
+
       <Grid>
         <GridItem>
-          CREATE A NEW TASK HERE, blud.
-          {/* <Todo key={index} todo={todo} setTodos={setTodos} createTodo={createTodo} mode={TodoMode.edit} /> */}
+          <TaskComponent
+                task={null}
+                updateTask={updateTask}
+                createTask={createTask}
+                mode={TaskMode.create}
+              />
         </GridItem>
       </Grid>
     </Box>

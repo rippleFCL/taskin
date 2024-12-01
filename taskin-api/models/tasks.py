@@ -23,7 +23,7 @@ class TCategory(SQLModel):
     tasks: list["TTask"] | None = None
 
 class CategoryBase(SQLModel):
-    id: UUID
+    id: UUID | None = None
     name: str
 
 class CategoryFull(CategoryBase):
