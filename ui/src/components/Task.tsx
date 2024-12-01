@@ -2,30 +2,20 @@ import React, { useEffect, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
 import { Button, Input, Select } from '@mui/material';
 import { TaskMode } from '../types';
-import { TaskSet, Task } from '../client/types.gen';
+import { TTask, StatusEnum } from '../client/types.gen';
 
 interface TaskProps {
-  createTask: (task: TaskSet) => void;
-  mode?: TaskMode;
-  task: Task;
-  updateTask: (task: TaskSet) => void;
+  createTask: (task: TTask | null, newTask: TTask) => void;
+  mode: TaskMode;
+  task: TTask | null;
+  updateTask: (task: TTask | null, newTask: TTask) => void;
 }
 
 const TaskComponent: React.FC<TaskProps> = (props) => {
-  const { task, createTask } = props;
-  const [mode, setMode] = useState<TaskMode>(props.mode || TaskMode.view);
+  const { task, createTask, updateTask } = props;
+  const [mode, setMode] = useState<TaskMode>(props.mode);
   const taskForm = useRef<HTMLFormElement>(null);
 
-  const reset = () => {
-    setMode(TaskMode.view);
-  }
-
-  // TODO: Check this useEffect
-  useEffect(() => {
-    if (mode === TaskMode.create) {
-      reset();
-    }
-  }, [mode]);
 
   const formTitles = {
       [TaskMode.create]: 'Create',
@@ -36,7 +26,6 @@ const TaskComponent: React.FC<TaskProps> = (props) => {
   const renderControls = (save: () => void) => {
     if (mode === TaskMode.create) {
       return <Button variant="outlined" color="primary" onClick={() => {
-        setMode(TaskMode.view);
         save()
       }}>Save</Button>
     } else if (mode === TaskMode.edit) {
@@ -51,39 +40,27 @@ const TaskComponent: React.FC<TaskProps> = (props) => {
     return <Button variant="outlined" color="primary" onClick={() => save()}>Save</Button>
   }
 
-  const validateAndUpdateTodo = (task: Task) => {
+  const formatAndSaveTask = (new_task: TTask, save: ((task: TTask | null, newTask: TTask) => void) | null) => {
     if (!taskForm.current) {
       console.warn('Form not found');
       return;
     }
-
-    const formData = new FormData(taskForm.current);
-    const taskParams = Object.keys(task) as (keyof TaskSet)[];
-
-    const payload: TaskSet = {} as TaskSet;
-    taskParams.forEach((p) => {
-      // @typescript-eslint/no-explicit-any
-      payload[p] = formData.get(p) ? formData.get(p) as any : task[p];
-    });
-
-    // TODO: Bring ZOD Into do validation here.
-    if (!payload.name) {
-      console.warn('Name is required');
-      return;
+    const payload: TTask = {
+      ...new_task,
+      id: new_task.id ?? null,
+      status: (taskForm.current?.querySelector('select')?.value ?? new_task.status) as StatusEnum,
+      name: taskForm.current?.querySelector('input')?.value ?? new_task.name,
     }
-
-    if (!payload.category_id) {
-      console.warn('Status is required');
-      return;
+    if (save !== null) {
+      console.log(payload, task, save)
+      save(task, payload);
     }
-
-    createTask(payload);
   }
 
-  if (mode !== TaskMode.view) {
+  if(task === null) {
     return (
       <Box p={1} m={1}>
-        <h1>{formTitles[mode]}</h1>
+        <h1>New Task</h1>
         <form ref={taskForm}>
           <Input type="text" />
           <Select native>
@@ -92,9 +69,36 @@ const TaskComponent: React.FC<TaskProps> = (props) => {
             <option value="in_prog">In Progress</option>
           </Select>
         </form>
+      {renderControls(() => {
+        formatAndSaveTask({
+          id: null,
+          name: "default",
+          status: "todo",
+          category_id: null
+        }, createTask);
+        setMode(TaskMode.create);
+      })}
 
-        {renderControls((task: TaskSet) => {
-          validateAndUpdateTodo(task);
+    </Box>
+    );
+  }
+  if (mode !== TaskMode.view) {
+    return (
+      <Box p={1} m={1}>
+        <h1>{formTitles[mode]}</h1>
+        <form ref={taskForm}>
+          <Input type="text" defaultValue={task.name}/>
+          <Select native>
+            <option value="todo">Todo</option>
+            <option value="comp">Comp</option>
+            <option value="in_prog">In Progress</option>
+          </Select>
+        </form>
+
+        {renderControls(() => {
+          formatAndSaveTask(task, updateTask);
+          setMode(TaskMode.view);
+
         })}
       </Box>
     );
@@ -102,10 +106,12 @@ const TaskComponent: React.FC<TaskProps> = (props) => {
 
   return (
     <Box p={1} m={1}>
+
       <h1>{task.name ? task.name : 'Your Todo'}</h1>
-      <p>{task.category_id}</p>
+      <h2>{task.status}</h2>
+      <p>{task.category_id} </p>
       {renderControls(() => {
-        validateAndUpdateTodo(task);
+        formatAndSaveTask(task, null);
         setMode(TaskMode.view);
       })}
 

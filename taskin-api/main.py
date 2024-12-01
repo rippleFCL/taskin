@@ -3,13 +3,13 @@ from annotated_types import T
 from fastapi import FastAPI, Depends, HTTPException, Query, Request, Response
 from fastapi.routing import APIRoute
 from typing import Annotated, Sequence, Callable
-from models import Task, Category, TaskSet, CategorySet, CategoryResponse, TaskResponse, StatusEnum
+from models import Task, Category, TTask, TCategory, TaskFull, CategoryFull, StatusEnum, TaskBase
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import create_engine, Session, SQLModel, select
 import logging
 
 logger = logging.getLogger("uvicorn.error")
-app = FastAPI()
+app = FastAPI(separate_input_output_schemas=False)
 
 class DevLogger(APIRoute):
     def get_route_handler(self) -> Callable:
@@ -56,93 +56,110 @@ app.add_middleware(
 )
 
 
+def cast_task_model(source: Task) -> TaskFull:
+    return TaskFull.model_validate(source.model_dump())
 
+def cast_category_model(source: Category) -> CategoryFull:
+    return CategoryFull.model_validate(source.model_dump())
 
 @app.on_event("startup")
 def on_startup():
     create_db_and_tables()
 
 
-@app.get("/tasks", operation_id="get_tasks", response_model=Sequence[TaskResponse])
+@app.get("/tasks", operation_id="get_tasks", response_model=Sequence[TTask])
 def read_tasks(
     session: SessionDep,
     offset: int = 0,
     limit: Annotated[int, Query(le=100)] = 100,
-) -> Sequence[Task]:
+) -> Sequence[TaskFull]:
     tasks = session.exec(select(Task).offset(offset).limit(limit)).all()
-    return tasks
+    return [cast_task_model(task) for task in tasks]
 
+# @app.get("/tasks/uncategorised", operation_id="get_uncategorised_tasks", response_model=Sequence[TTask])
+# def get_uncategorised_tasks(
+#     session: SessionDep,
+#     offset: int = 0,
+#     limit: Annotated[int, Query(le=100)] = 100,
+# ) -> Sequence[TaskFull]:
+#
+#     return [cast_task_model(task) for task in tasks]
 
-@app.post("/tasks", operation_id="create_task")
-def create_task(task: TaskSet, session: SessionDep) -> Task:
-    db_task = Task.model_validate(task)
+@app.post("/tasks", operation_id="create_task", response_model=TTask)
+def create_task(task: TTask, session: SessionDep) -> TaskFull:
+    db_task = Task.model_validate(task.model_dump(exclude_unset=True, exclude_none=True))
+
     session.add(db_task)
     session.commit()
     session.refresh(db_task)
-    return db_task
+    print(db_task.model_dump())
+    return cast_task_model(db_task)
 
-@app.get("/tasks/by-status/{status}", operation_id="get_task_by_status", response_model=Sequence[TaskResponse])
-def get_task_by_status(status: StatusEnum, session: SessionDep) -> Sequence[Task]:
-    task = session.exec(select(Task).where(Task.status == status)).all()
-    return task
+@app.get("/tasks/by-status/{status}", operation_id="get_task_by_status", response_model=Sequence[TTask])
+def get_task_by_status(status: StatusEnum, session: SessionDep) -> Sequence[TaskFull]:
+    tasks = session.exec(select(Task).where(Task.status == status)).all()
+    return [cast_task_model(task) for task in tasks]
 
-@app.get("/tasks/{task_id}", operation_id="get_task", response_model=TaskResponse)
-def get_task(task_id: str, session: SessionDep):
+@app.get("/tasks/{task_id}", operation_id="get_task", response_model=TTask)
+def get_task(task_id: UUID, session: SessionDep) -> TaskFull:
     task = session.get(Task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
-    return task
+    return cast_task_model(task)
 
-
-@app.delete("/tasks/{task_id}", operation_id="delete_task")
+@app.delete("/tasks/{task_id}", operation_id="delete_task", status_code=200)
 def delete_task(task_id: str, session: SessionDep):
     task = session.get(Task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     session.delete(task)
     session.commit()
-    return {"deleted": True}
+    return ""
 
 
-@app.put("/tasks/{task_id}", operation_id="update_task", response_model=TaskResponse)
-def update_task(task_id: UUID, new_task: TaskSet, session: SessionDep) -> Task:
+@app.put("/tasks/{task_id}", operation_id="update_task", response_model=TTask)
+def update_task(task_id: UUID, new_task: TTask, session: SessionDep) -> TaskFull:
     task = session.get(Task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
-    task.sqlmodel_update(new_task.model_dump(exclude_unset=True))
+    task.sqlmodel_update(new_task.model_dump(exclude_unset=True, exclude_none=True))
     session.add(task)
     session.commit()
     session.refresh(task)
-    return task
+    return cast_task_model(task)
 
 
-@app.get("/categories", operation_id="get_categories", response_model=Sequence[CategoryResponse])
+@app.get("/categories", operation_id="get_categories", response_model=Sequence[TCategory])
 def read_categories(
     session: SessionDep,
     offset: int = 0,
     limit: Annotated[int, Query(le=100)] = 100,
-) -> Sequence[Category]:
+) -> Sequence[CategoryFull]:
     categories = session.exec(select(Category).offset(offset).limit(limit)).all()
-    return categories
+    tasks = session.exec(select(Task).where(Task.category_id == None).offset(offset).limit(limit)).all()
+    tasks_full =  [TaskBase.model_validate(task.model_dump()) for task in tasks]
+
+    return [cast_category_model(category) for category in categories] + [CategoryFull(name="Uncategorised", tasks=tasks_full)]
 
 
-@app.get("/categories/{category_id}", operation_id="get_category", response_model=CategoryResponse)
-def get_category(category_id: str, session: SessionDep):
+@app.get("/categories/{category_id}", operation_id="get_category", response_model=TCategory)
+def get_category(category_id: str, session: SessionDep) -> CategoryFull:
     category = session.get(Category, category_id)
     if not category:
         raise HTTPException(status_code=404, detail="category not found")
-    return category
+    return cast_category_model(category)
 
-@app.post("/categories", operation_id="create_category")
-def create_category(category: CategorySet, session: SessionDep) -> Category:
+
+@app.post("/categories", operation_id="create_category", response_model=TCategory)
+def create_category(category: TCategory, session: SessionDep) -> CategoryFull:
     existing = session.exec(select(Category).where(Category.name == category.name))
     if existing:
         raise HTTPException(status_code=409, detail="Category already exists")
-    db_category = Category.model_validate(category)
+    db_category = Category.model_validate(category.model_dump(exclude_unset=True, exclude_none=True))
     session.add(db_category)
     session.commit()
     session.refresh(db_category)
-    return db_category
+    return cast_category_model(db_category)
 
 
 @app.delete("/categories/{category_id}", operation_id="delete_category")
@@ -156,13 +173,13 @@ def delete_category(category_id: str, session: SessionDep):
     return {"deleted": True}
 
 
-@app.put("/categories/{category_id}", operation_id="update_category", response_model=CategoryResponse)
-def update_category(category_id: str, new_category: CategorySet, session: SessionDep):
+@app.put("/categories/{category_id}", operation_id="update_category", response_model=TCategory)
+def update_category(category_id: str, new_category: TCategory, session: SessionDep):
     category = session.get(Category, category_id)
     if not category:
         raise HTTPException(status_code=404, detail="category not found")
-    category.sqlmodel_update(new_category.model_dump(exclude_unset=True))
+    category.sqlmodel_update(new_category.model_dump(exclude_unset=True, exclude_none=True))
     session.add(category)
     session.commit()
     session.refresh(category)
-    return category
+    return cast_category_model(category)
