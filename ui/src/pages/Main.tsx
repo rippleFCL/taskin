@@ -11,10 +11,12 @@ interface MainPropTypes {
   categories: TCategory[],
   createTask: (task: TTask | null, newTask: TTask) => void
   updateTask: (task: TTask | null, newTask: TTask) => void
+  deleteTask: (task: TTask) => void;
+
 }
 
 const Home = (props: MainPropTypes): ReactElement => {
-  const { categories, createTask, updateTask } = props
+  const { categories, createTask, updateTask, deleteTask } = props
 
   return (
     <Box>
@@ -28,6 +30,7 @@ const Home = (props: MainPropTypes): ReactElement => {
                 task={task}
                 updateTask={updateTask}
                 createTask={createTask}
+                deleteTask={deleteTask}
                 mode={TaskMode.view}
               />
             </GridItem>
@@ -41,6 +44,7 @@ const Home = (props: MainPropTypes): ReactElement => {
                 task={null}
                 updateTask={updateTask}
                 createTask={createTask}
+                deleteTask={deleteTask}
                 mode={TaskMode.create}
               />
         </GridItem>

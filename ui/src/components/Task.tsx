@@ -6,13 +6,14 @@ import { TTask, StatusEnum } from '../client/types.gen';
 
 interface TaskProps {
   createTask: (task: TTask | null, newTask: TTask) => void;
+  updateTask: (task: TTask | null, newTask: TTask) => void;
+  deleteTask: (task: TTask) => void;
   mode: TaskMode;
   task: TTask | null;
-  updateTask: (task: TTask | null, newTask: TTask) => void;
 }
 
 const TaskComponent: React.FC<TaskProps> = (props) => {
-  const { task, createTask, updateTask } = props;
+  const { task, createTask, updateTask, deleteTask } = props;
   const [mode, setMode] = useState<TaskMode>(props.mode);
   const taskForm = useRef<HTMLFormElement>(null);
 
@@ -23,7 +24,7 @@ const TaskComponent: React.FC<TaskProps> = (props) => {
       [TaskMode.view]: 'Your Todo'
   }
 
-  const renderControls = (save: () => void) => {
+  const renderControls = (save: () => void, removeTask: () => void) => {
     if (mode === TaskMode.create) {
       return <Button variant="outlined" color="primary" onClick={() => {
         save()
@@ -32,6 +33,8 @@ const TaskComponent: React.FC<TaskProps> = (props) => {
       return <>
         <Button variant="outlined" color="primary" onClick={() => setMode(TaskMode.view)}>Cancel</Button>
         <Button variant="outlined" color="primary" onClick={() => save()}>Save</Button>
+        <Button variant="outlined" color="primary" onClick={() => removeTask()}>Delete</Button>
+
       </>
     } else if (mode === TaskMode.view) {
       return <Button variant="outlined" color="primary" onClick={() => setMode(TaskMode.edit)}>Edit</Button>
@@ -69,15 +72,18 @@ const TaskComponent: React.FC<TaskProps> = (props) => {
             <option value="in_prog">In Progress</option>
           </Select>
         </form>
-      {renderControls(() => {
-        formatAndSaveTask({
-          id: null,
-          name: "default",
-          status: "todo",
-          category_id: null
-        }, createTask);
-        setMode(TaskMode.create);
-      })}
+        {renderControls(
+          () => {
+            formatAndSaveTask({
+              id: null,
+              name: "default",
+              status: "todo",
+              category_id: null
+            }, createTask);
+            setMode(TaskMode.create);
+          },
+          () => { }
+        )}
 
     </Box>
     );
@@ -95,11 +101,16 @@ const TaskComponent: React.FC<TaskProps> = (props) => {
           </Select>
         </form>
 
-        {renderControls(() => {
-          formatAndSaveTask(task, updateTask);
-          setMode(TaskMode.view);
-
-        })}
+        {renderControls(
+          () => {
+            formatAndSaveTask(task, updateTask);
+            setMode(TaskMode.view);
+          },
+          () => {
+            deleteTask(task);
+            setMode(TaskMode.view);
+          }
+        )}
       </Box>
     );
   }
@@ -110,10 +121,16 @@ const TaskComponent: React.FC<TaskProps> = (props) => {
       <h1>{task.name ? task.name : 'Your Todo'}</h1>
       <h2>{task.status}</h2>
       <p>{task.category_id} </p>
-      {renderControls(() => {
-        formatAndSaveTask(task, null);
-        setMode(TaskMode.view);
-      })}
+      {renderControls(
+        () => {
+          formatAndSaveTask(task, null);
+          setMode(TaskMode.view);
+        },
+        () => {
+          deleteTask(task);
+          setMode(TaskMode.view);
+        }
+      )}
 
     </Box>
   );
