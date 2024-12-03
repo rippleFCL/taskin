@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import Box from '@mui/material/Box';
 import { Input, Select } from '@mui/material';
 import { NoReloadButton as Button } from './NoReloadButton';
 import { TaskMode } from '../types';
 import { TTask, StatusEnum, TCategory } from '../client/types.gen';
+import { Item } from "../styles";
 
 interface TaskProps {
   createTask: (task: TTask | null, newTask: TTask) => void;
@@ -26,6 +26,31 @@ const TaskComponent: React.FC<TaskProps> = (props) => {
     [TaskMode.view]: 'Your Todo'
   }
 
+  const statusProgression = () => {
+    if (!task) {
+      return;
+    }
+    const statusMaping = {
+      "todo": "in_prog",
+      "in_prog": "comp",
+      "comp": "todo"
+    }
+    const newTask = { ...task, status: statusMaping[task.status] }
+    updateTask(task, newTask as unknown as TTask)
+  }
+
+  const RenderStatusControls = () => {
+    if (!task) {
+      return;
+    }
+    const statusMaping = {
+      "todo": "Mark as in progress",
+      "in_prog": "Mark as completed",
+      "comp": "Mark as todo"
+    }
+    return <Button variant="outlined" color="primary" onClick={() => statusProgression()}>{statusMaping[task.status]}</Button>
+
+  }
   const renderControls = (save: () => void, removeTask: () => void) => {
     if (mode === TaskMode.create) {
       return <Button variant="outlined" color="primary" onClick={() => {
@@ -39,7 +64,11 @@ const TaskComponent: React.FC<TaskProps> = (props) => {
 
       </>
     } else if (mode === TaskMode.view) {
-      return <Button variant="outlined" color="primary" onClick={() => setMode(TaskMode.edit)}>Edit</Button>
+      return <>
+        <Button variant="outlined" color="primary" onClick={() => setMode(TaskMode.edit)}>Edit</Button>
+        {RenderStatusControls()}
+      </>
+
     }
 
     return <Button variant="outlined" color="primary" onClick={() => save()}>Save</Button>
@@ -77,7 +106,7 @@ const TaskComponent: React.FC<TaskProps> = (props) => {
   }
   if (task === null) {
     return (
-      <Box p={1} m={1}>
+      <Item elevation={3}>
         <h1>New Task</h1>
         <form ref={taskForm} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); } }}>
           <Input type="text" />
@@ -96,12 +125,12 @@ const TaskComponent: React.FC<TaskProps> = (props) => {
           () => { }
         )}
 
-      </Box>
+      </Item>
     );
   }
   if (mode !== TaskMode.view) {
     return (
-      <Box p={1} m={1}>
+      <Item elevation={3}>
         <h1>{formTitles[mode]}</h1>
         <form ref={taskForm} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); } }} >
           <Input type="text" defaultValue={task.name} />
@@ -118,12 +147,12 @@ const TaskComponent: React.FC<TaskProps> = (props) => {
             setMode(TaskMode.view);
           }
         )}
-      </Box>
+      </Item>
     );
   }
 
   return (
-    <Box p={1} m={1}>
+    <Item elevation={3}>
 
       <h1>{task.name ? task.name : 'Your Todo'}</h1>
       <h2>{task.status}</h2>
@@ -138,7 +167,7 @@ const TaskComponent: React.FC<TaskProps> = (props) => {
         }
       )}
 
-    </Box>
+    </Item>
   );
 };
 

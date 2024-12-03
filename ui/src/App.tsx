@@ -6,6 +6,9 @@ import { OuterContainer } from './styles'
 import { TTask } from './client/types.gen'
 import { useState, useEffect } from 'react'
 import Main from './pages/Main'
+import { createTheme, CssBaseline, ThemeProvider } from '@mui/material'
+
+
 
 const apiClient = createClient({
   baseUrl: 'http://localhost:8080',
@@ -266,24 +269,31 @@ useEffect(() => {
   if (hasError) {
     return <div>Something went wrong: {hasError}</div>
   }
-
+  const darkTheme = createTheme({
+    palette: {
+      mode: 'dark',
+    }
+  })
   return (
-    <OuterContainer>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Main
-            categories={categories}
-            createTask={newTask}
-            deleteTask={removeTask}
-            updateTask={SaveTask}
-            setCategory={setCategory}
-            deleteCategory={removeCategory}
-          />} />
-          {/* <Route path="/create" element={<TodoForm />} /> */}
-          {/* <Route path="/:id" element={<TodoForm />} /> */}
-        </Routes>
-      </BrowserRouter>
-    </OuterContainer>
+    <ThemeProvider theme={darkTheme}>
+      <CssBaseline />
+      <OuterContainer>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Main
+              categories={categories}
+              createTask={newTask}
+              deleteTask={removeTask}
+              updateTask={SaveTask}
+              setCategory={setCategory}
+              deleteCategory={removeCategory}
+            />} />
+            {/* <Route path="/create" element={<TodoForm />} /> */}
+            {/* <Route path="/:id" element={<TodoForm />} /> */}
+          </Routes>
+        </BrowserRouter>
+      </OuterContainer>
+    </ThemeProvider>
   )
 }
 
