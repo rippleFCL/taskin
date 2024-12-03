@@ -9,7 +9,7 @@ import Main from './pages/Main'
 import { createTheme, CssBaseline, ThemeProvider } from '@mui/material'
 
 const apiClient = createClient({
-  baseUrl: 'http://localhost:8080',
+  baseUrl: 'http://'+window.location.hostname+':8080',
   headers: {
     Authorization: 'Bearer <token_from_service_client>',
   },
@@ -22,7 +22,7 @@ apiClient.interceptors.request.use((request, options) => {
 
 const App = (): JSX.Element => {
   const [hasFetched, setHasFetched] = useState(false)
-  const [hasError, setHasError] = useState<boolean | string>(false)
+  const [hasError, setHasError] = useState<string>("")
   const [categories, setCategories] = useState<TCategory[]>([])
 
   function getTaskCategory(task: TTask): [category: TCategory | undefined, categoryIndex: number | undefined] {
@@ -138,7 +138,7 @@ useEffect(() => {
         setCategories(data as unknown as GetCategoriesResponse);
       }
     }).catch(error => {
-      setHasError(error);
+      setHasError(error.toString());
 
       console.error(error);
     });
@@ -258,13 +258,14 @@ useEffect(() => {
     })
   }
 
+  if (hasError) {
+    return <div>Something went wrong: {hasError}</div>
+  }
+
   if (!hasFetched) {
     return <div><img src="https://cdn.dribbble.com/users/1204962/screenshots/4651504/hamster-loader.gif" alt="loading.gif" width="100px"></img></div>
   }
 
-  if (hasError) {
-    return <div>Something went wrong: {hasError}</div>
-  }
   const darkTheme = createTheme({
     palette: {
       mode: 'dark',
