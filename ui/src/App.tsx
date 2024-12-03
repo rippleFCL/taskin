@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router'
 import { createClient } from '@hey-api/client-fetch'
-import { createTask, getCategories, getUncategorisedTasks, updateTask } from './client/sdk.gen'
-import { GetCategoriesResponse, GetUncategorisedTasksResponse, TCategory } from './client/types.gen'
+import { createTask, getCategories, deleteTask, updateTask } from './client/sdk.gen'
+import { GetCategoriesResponse, TCategory } from './client/types.gen'
 import { OuterContainer } from './styles'
 import { TTask } from './client/types.gen'
 import { useState, useEffect } from 'react'
@@ -109,6 +109,27 @@ const App = (): JSX.Element => {
     setCategories(newCategories)
   }
 
+  function removeTaskFromCategory(task: TTask) {
+    const [category, categoryIndex] = getTaskCategory(task);
+    const newCategories = [...categories]
+    if (categoryIndex === undefined || categoryIndex === -1) {
+      return console.log('Category index not found');
+    }
+    if (!category) {
+      return console.log('Category not found');
+    }
+    if (!newCategories[categoryIndex].tasks) {
+      return console.log('Category has no tasks');
+    }
+    const taskIndex = category?.tasks?.findIndex(catTask => catTask.id === task.id)
+    if (taskIndex === undefined || taskIndex === -1) {
+      return console.log('Task not found');;
+    }
+    category.tasks?.splice(taskIndex, 1)
+    newCategories[categoryIndex] = category
+    setCategories(newCategories)
+  }
+
   useEffect(() => {
     getCategories({
       client: apiClient,
@@ -131,7 +152,7 @@ const App = (): JSX.Element => {
     });
   }, [])
 
-  const newTask = (task: TTask, newTask: TTask) => {
+  const newTask = (task: TTask | null, newTask: TTask) => {
     createTask({
       client: apiClient,
       headers: {
@@ -174,6 +195,28 @@ const App = (): JSX.Element => {
     })
   }
 
+  const removeTask = (task: TTask) => {
+    if (!task?.id) {
+      return console.error('Task has no id');
+    }
+    removeTaskFromCategory(task);
+    deleteTask({
+      client: apiClient,
+      headers: {
+        Authorization: 'Bearer <token>',
+      },
+      path: {
+        task_id: task.id
+      }
+    }).then(response => {
+      const { data, error } = response;
+      if (error) {
+        return console.error(error);
+      } else {
+        console.log(data, task);
+      }
+    })
+  }
   if (!hasFetched) {
     return <div><img src="https://cdn.dribbble.com/users/1204962/screenshots/4651504/hamster-loader.gif" alt="loading.gif" width="100px"></img></div>
   }
@@ -189,6 +232,7 @@ const App = (): JSX.Element => {
           <Route path="/" element={<Main
             categories={categories}
             createTask={newTask}
+            deleteTask={removeTask}
             updateTask={SaveTask}
           />} />
           {/* <Route path="/create" element={<TodoForm />} /> */}

@@ -108,7 +108,7 @@ def get_task(task_id: UUID, session: SessionDep) -> TaskFull:
     return cast_task_model(task)
 
 @app.delete("/tasks/{task_id}", operation_id="delete_task", status_code=200)
-def delete_task(task_id: str, session: SessionDep):
+def delete_task(task_id: UUID, session: SessionDep):
     task = session.get(Task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -143,7 +143,7 @@ def read_categories(
 
 
 @app.get("/categories/{category_id}", operation_id="get_category", response_model=TCategory)
-def get_category(category_id: str, session: SessionDep) -> CategoryFull:
+def get_category(category_id: UUID, session: SessionDep) -> CategoryFull:
     category = session.get(Category, category_id)
     if not category:
         raise HTTPException(status_code=404, detail="category not found")
@@ -163,7 +163,7 @@ def create_category(category: TCategory, session: SessionDep) -> CategoryFull:
 
 
 @app.delete("/categories/{category_id}", operation_id="delete_category")
-def delete_category(category_id: str, session: SessionDep):
+def delete_category(category_id: UUID, session: SessionDep):
     category = session.get(Category, category_id)
     if not category:
         raise HTTPException(status_code=404, detail="category not found")
@@ -174,7 +174,7 @@ def delete_category(category_id: str, session: SessionDep):
 
 
 @app.put("/categories/{category_id}", operation_id="update_category", response_model=TCategory)
-def update_category(category_id: str, new_category: TCategory, session: SessionDep):
+def update_category(category_id: UUID, new_category: TCategory, session: SessionDep):
     category = session.get(Category, category_id)
     if not category:
         raise HTTPException(status_code=404, detail="category not found")
