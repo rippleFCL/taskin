@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router'
+import { BrowserRouter, Routes, Route, useParams } from 'react-router'
 import { createClient } from '@hey-api/client-fetch'
 import { createTask, getCategories, deleteTask, updateTask, createCategory, deleteCategory } from './client/sdk.gen'
 import { GetCategoriesResponse, TCategory } from './client/types.gen'
@@ -7,8 +7,6 @@ import { TTask } from './client/types.gen'
 import { useState, useEffect } from 'react'
 import Main from './pages/Main'
 import { createTheme, CssBaseline, ThemeProvider } from '@mui/material'
-
-
 
 const apiClient = createClient({
   baseUrl: 'http://localhost:8080',
@@ -24,7 +22,6 @@ apiClient.interceptors.request.use((request, options) => {
 
 const App = (): JSX.Element => {
   const [hasFetched, setHasFetched] = useState(false)
-
   const [hasError, setHasError] = useState<boolean | string>(false)
   const [categories, setCategories] = useState<TCategory[]>([])
 
@@ -277,20 +274,14 @@ useEffect(() => {
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
       <OuterContainer>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Main
-              categories={categories}
-              createTask={newTask}
-              deleteTask={removeTask}
-              updateTask={SaveTask}
-              setCategory={setCategory}
-              deleteCategory={removeCategory}
-            />} />
-            {/* <Route path="/create" element={<TodoForm />} /> */}
-            {/* <Route path="/:id" element={<TodoForm />} /> */}
-          </Routes>
-        </BrowserRouter>
+        <Main
+            categories={categories}
+            createTask={newTask}
+            deleteTask={removeTask}
+            updateTask={SaveTask}
+            setCategory={setCategory}
+            deleteCategory={removeCategory}
+         />
       </OuterContainer>
     </ThemeProvider>
   )

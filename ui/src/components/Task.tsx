@@ -1,13 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Input, Select } from '@mui/material';
 import { NoReloadButton as Button } from './NoReloadButton';
 import { TTask, StatusEnum, TCategory } from '../client/types.gen';
-import { Item } from "../styles";
-import Modal from '@mui/material/Modal';
-import TableCell from '@mui/material/TableCell';
-import Typography from '@mui/material/Typography';
+import { modelStyle } from "../styles";
+import { Typography, ButtonGroup, Modal, Input, Select, useMediaQuery, ListItem } from '@mui/material';
 import Box from '@mui/material/Box';
-import { modelStyle } from '../styles';
 
 interface TaskProps {
   createTask: (task: TTask | null, newTask: TTask) => void;
@@ -17,17 +13,13 @@ interface TaskProps {
   categories: TCategory[] | undefined;
 }
 
-
 const TaskComponent: React.FC<TaskProps> = (props) => {
-  const [open, setOpen] = React.useState(false);
+  const [open, setOpen] = useState(false);
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
   const { task, createTask, updateTask, deleteTask } = props;
   const taskForm = useRef<HTMLFormElement>(null);
-
-
-
-
+  const isMobile = useMediaQuery('(max-width:600px)');
 
   const statusProgression = () => {
     if (!task) {
@@ -46,20 +38,21 @@ const TaskComponent: React.FC<TaskProps> = (props) => {
     if (!task) {
       return;
     }
-    const statusMaping = {
-      "todo": "Mark as in progress",
-      "in_prog": "Mark as completed",
-      "comp": "Mark as todo"
-    }
-    return <Button variant="outlined" color="primary" onClick={() => statusProgression()}>{statusMaping[task.status]}</Button>
 
+    const statusMaping = {
+      "todo": "Start",
+      "in_prog": "Complete",
+      "comp": "Reset"
+    }
+
+    return <Button variant="outlined" color="primary" onClick={() => statusProgression()}>{statusMaping[task.status]}</Button>
   }
   const renderControls = (save: () => void, removeTask: () => void) => {
-    return <>
+    return <ButtonGroup size="small" aria-label="Small button group" orientation={isMobile ? 'vertical': 'horizontal'}>
       <Button variant="outlined" color="primary" onClick={handleClose}>Cancel</Button>
       <Button variant="outlined" color="primary" onClick={() => save()}>Save</Button>
       <Button variant="outlined" color="primary" onClick={() => removeTask()}>Delete</Button>
-    </>
+    </ButtonGroup>
   }
 
   const formatAndSaveTask = (new_task: TTask, save: ((task: TTask | null, newTask: TTask) => void)) => {
@@ -68,7 +61,6 @@ const TaskComponent: React.FC<TaskProps> = (props) => {
       return;
     }
     const catId = taskForm.current?.querySelector('select')?.value
-    console.log(catId)
     const payload: TTask = {
       ...new_task,
       id: new_task.id ?? null,
@@ -76,18 +68,17 @@ const TaskComponent: React.FC<TaskProps> = (props) => {
       category_id: (catId === "" ? null : catId),
       name: taskForm.current?.querySelector('input')?.value ?? new_task.name,
     }
-    console.log(payload, task, save)
     save(task, payload);
   }
+
   const catSelector = () => {
-    console.log(task?.category_id)
     return <>{
       props.categories ?
         <Select native defaultValue={task?.category_id ?? ""}>
           {props.categories?.map((category: TCategory) => (
             <option key={category.id} value={category.id ? category.id : ""} >{category.name}</option>
           ))}
-        </Select> : <></>
+        </Select> : null
     }</>
   }
 
@@ -115,11 +106,14 @@ const TaskComponent: React.FC<TaskProps> = (props) => {
         )}
       </Box>
     </Modal>
-    <TableCell ><Typography variant='h6'>{task.name ? task.name : 'Your Todo'}</Typography></TableCell>
-    <TableCell align="right">
-      <Button variant="outlined" color="primary" onClick={handleOpen}>Edit</Button>
-      {RenderStatusControls()}
-    </TableCell>
+    <ListItem secondaryAction={
+      <ButtonGroup>
+        <Button variant="outlined" color="primary" onClick={handleOpen}>Edit</Button>
+        {RenderStatusControls()}
+      </ButtonGroup>
+    }>
+      {task.name ? task.name : 'Your Todo'}
+    </ListItem>
   </>
 };
 
