@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
 import { Button, Input, Select } from '@mui/material';
 import { TaskMode } from '../types';
-import { TTask, StatusEnum } from '../client/types.gen';
+import { TTask, StatusEnum, TCategory } from '../client/types.gen';
 
 interface TaskProps {
   createTask: (task: TTask | null, newTask: TTask) => void;
@@ -10,6 +10,7 @@ interface TaskProps {
   deleteTask: (task: TTask) => void;
   mode: TaskMode;
   task: TTask | null;
+  categories: TCategory[] | undefined;
 }
 
 const TaskComponent: React.FC<TaskProps> = (props) => {
@@ -48,10 +49,13 @@ const TaskComponent: React.FC<TaskProps> = (props) => {
       console.warn('Form not found');
       return;
     }
+    const catId = taskForm.current?.querySelector('select')?.value
+    console.log(catId)
     const payload: TTask = {
       ...new_task,
       id: new_task.id ?? null,
-      status: (taskForm.current?.querySelector('select')?.value ?? new_task.status) as StatusEnum,
+      status: new_task.status ?? "todo",
+      category_id: (catId=== "" ? null : catId),
       name: taskForm.current?.querySelector('input')?.value ?? new_task.name,
     }
     if (save !== null) {
@@ -59,18 +63,24 @@ const TaskComponent: React.FC<TaskProps> = (props) => {
       save(task, payload);
     }
   }
-
+  const catSelector = () => {
+    console.log(task?.category_id)
+    return <>{
+      props.categories ?
+      <Select native defaultValue={task?.category_id ?? ""}>
+        {props.categories?.map((category: TCategory) => (
+          <option key={category.id} value={category.id ? category.id : ""} >{category.name}</option>
+        ))}
+      </Select> : <></>
+    }</>
+  }
   if(task === null) {
     return (
       <Box p={1} m={1}>
         <h1>New Task</h1>
         <form ref={taskForm}>
           <Input type="text" />
-          <Select native>
-            <option value="todo">Todo</option>
-            <option value="comp">Comp</option>
-            <option value="in_prog">In Progress</option>
-          </Select>
+          {catSelector()}
         </form>
         {renderControls(
           () => {
@@ -93,12 +103,8 @@ const TaskComponent: React.FC<TaskProps> = (props) => {
       <Box p={1} m={1}>
         <h1>{formTitles[mode]}</h1>
         <form ref={taskForm}>
-          <Input type="text" defaultValue={task.name}/>
-          <Select native>
-            <option value="todo">Todo</option>
-            <option value="comp">Comp</option>
-            <option value="in_prog">In Progress</option>
-          </Select>
+          <Input type="text" defaultValue={task.name} />
+          {catSelector()}
         </form>
 
         {renderControls(
@@ -120,7 +126,6 @@ const TaskComponent: React.FC<TaskProps> = (props) => {
 
       <h1>{task.name ? task.name : 'Your Todo'}</h1>
       <h2>{task.status}</h2>
-      <p>{task.category_id} </p>
       {renderControls(
         () => {
           formatAndSaveTask(task, null);

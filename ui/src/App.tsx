@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router'
 import { createClient } from '@hey-api/client-fetch'
-import { createTask, getCategories, deleteTask, updateTask } from './client/sdk.gen'
+import { createTask, getCategories, deleteTask, updateTask, createCategory, deleteCategory } from './client/sdk.gen'
 import { GetCategoriesResponse, TCategory } from './client/types.gen'
 import { OuterContainer } from './styles'
 import { TTask } from './client/types.gen'
@@ -46,56 +46,10 @@ const App = (): JSX.Element => {
     return [category, categoryIndex]
   }
 
-  function replaceTaskInCategory(task: TTask | null, newTask: TTask) {
-    // Find the category by id
-    console.log("wheel up da ting", task, newTask)
-    if (task?.id !== newTask.id) {
-      return console.log('Task not found');
-
-    }
-    if (!newTask.id) {
-      return console.log('New task has no id');
-    }
-
-    if (task.category_id === newTask.category_id) {
-      const [category, categoryIndex] = getTaskCategory(task);
-      const newCategories = [...categories]
-      if (categoryIndex === undefined || categoryIndex === -1) {
-        return console.log('Category index not found');
-      }
-      if (!category) {
-        return console.log('Category not found');
-      }
-      if (!newCategories[categoryIndex].tasks) {
-        return console.log('Category has no tasks');
-      }
-      const taskIndex = category?.tasks?.findIndex(catTask => catTask.id === task.id)
-      if (taskIndex === undefined || taskIndex === -1) {
-        return console.log('Task not found');;
-      }
-      category.tasks?.splice(taskIndex, 1, newTask)
-      newCategories[categoryIndex] = category
-      setCategories(newCategories)
-    }
-    if (!task.id) {
-      const [category, oldCategoryIndex] = getTaskCategory(task);
-      const oldCategoryTasks = category?.tasks?.filter(catTask => catTask.id !== task.id)
-
-    }
-    const [category, newCategoryIndex] = getTaskCategory(newTask);
-    const newCategoryTasks = category?.tasks?.concat([newTask])
-
-
-    // Replace the task with the new task
-
-
-    // Find the task in the category
-
-  }
-
   function addTaskToCategory(task: TTask) {
     const [category, categoryIndex] = getTaskCategory(task);
     const newCategories = [...categories]
+    console.log("wah", category, categoryIndex)
     if (categoryIndex === undefined || categoryIndex === -1) {
       return console.log('Category index not found');
     }
@@ -130,8 +84,46 @@ const App = (): JSX.Element => {
     setCategories(newCategories)
   }
 
-  useEffect(() => {
-    getCategories({
+  function replaceTaskInCategory(task: TTask | null, newTask: TTask) {
+    // Find the category by id
+    console.log("wheel up da ting", task, newTask)
+    if (task?.id !== newTask.id) {
+      return console.log('Task not found');
+
+    }
+    if (!newTask.id) {
+      return console.log('New task has no id');
+    }
+
+    if (task.category_id === newTask.category_id) {
+      const [category, categoryIndex] = getTaskCategory(task);
+      const newCategories = [...categories]
+      if (categoryIndex === undefined || categoryIndex === -1) {
+        return console.log('Category index not found');
+      }
+      if (!category) {
+        return console.log('Category not found');
+      }
+      if (!newCategories[categoryIndex].tasks) {
+        return console.log('Category has no tasks');
+      }
+      const taskIndex = category?.tasks?.findIndex(catTask => catTask.id === task.id)
+      if (taskIndex === undefined || taskIndex === -1) {
+        return console.log('Task not found');;
+      }
+      category.tasks?.splice(taskIndex, 1, newTask)
+      newCategories[categoryIndex] = category
+      setCategories(newCategories)
+    }
+    if (!task.id) {
+      console.log('Task not found')
+
+    }
+    removeTaskFromCategory(task);
+    addTaskToCategory(newTask);
+  }
+useEffect(() => {
+  getCategories({
       client: apiClient,
       headers: {
         Authorization: 'Bearer <token>',
@@ -217,6 +209,56 @@ const App = (): JSX.Element => {
       }
     })
   }
+
+  const setCategory = (category: TCategory) => {
+    createCategory({
+      client: apiClient,
+      headers: {
+        Authorization: 'Bearer <token>',
+      },
+      body: category
+    }).then(response => {
+      const { data, error } = response;
+      if (error) {
+        return console.error(error);
+      } else {
+        const newCategories = [data as unknown as TCategory, ...categories]
+        console.log(newCategories)
+        setCategories(newCategories);
+      }
+    })
+  }
+
+  const removeCategory = (category: TCategory) => {
+    if (!category?.id) {
+      return console.error('Category has no id');
+    }
+    const categoryIndex = categories.indexOf(category);
+    if (categoryIndex === -1) {
+      return console.error('Category not found');
+    }
+    const newCategories = [...categories];
+    newCategories.splice(categoryIndex, 1);
+    setCategories(newCategories);
+
+    deleteCategory({
+      client: apiClient,
+      headers: {
+        Authorization: 'Bearer <token>',
+      },
+      path: {
+        category_id: category.id
+      }
+    }).then(response => {
+      const { data, error } = response;
+      if (error) {
+        return console.error(error);
+      } else {
+        console.log(data, category);
+      }
+    })
+  }
+
   if (!hasFetched) {
     return <div><img src="https://cdn.dribbble.com/users/1204962/screenshots/4651504/hamster-loader.gif" alt="loading.gif" width="100px"></img></div>
   }
@@ -234,6 +276,8 @@ const App = (): JSX.Element => {
             createTask={newTask}
             deleteTask={removeTask}
             updateTask={SaveTask}
+            setCategory={setCategory}
+            deleteCategory={removeCategory}
           />} />
           {/* <Route path="/create" element={<TodoForm />} /> */}
           {/* <Route path="/:id" element={<TodoForm />} /> */}

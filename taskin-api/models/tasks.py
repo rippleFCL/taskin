@@ -14,13 +14,13 @@ class StatusEnum(str, Enum):
 class Category(SQLModel, table=True):
     id: UUID | None = Field(default_factory=uuid4, primary_key=True, index=True)
     name: str = Field(index=True)
-    tasks: list["Task"] = Relationship(back_populates="category")
+    tasks: list["Task"] = Relationship(back_populates="category", cascade_delete=True)
 
 
 class TCategory(SQLModel):
     id: UUID | None = None
     name: str
-    tasks: list["TTask"] | None = None
+    tasks: list["TTask"] = None
 
 class CategoryBase(SQLModel):
     id: UUID | None = None
