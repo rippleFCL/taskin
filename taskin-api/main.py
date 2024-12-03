@@ -3,7 +3,7 @@ from annotated_types import T
 from fastapi import FastAPI, Depends, HTTPException, Query, Request, Response
 from fastapi.routing import APIRoute
 from typing import Annotated, Sequence, Callable
-from models import Task, Category, TTask, TCategory, TaskFull, CategoryFull, StatusEnum, TaskBase
+from models import Task, Category, TTask, TCategory, TaskFull, CategoryFull, StatusEnum, TaskBase, CategoryBase
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import create_engine, Session, SQLModel, select
 import logging
@@ -57,10 +57,19 @@ app.add_middleware(
 
 
 def cast_task_model(source: Task) -> TaskFull:
-    return TaskFull.model_validate(source.model_dump())
+    task = TaskFull.model_validate(source.model_dump())
+    if source.category :
+        task.category = CategoryBase.model_validate(source.category.model_dump())
+    return task
 
 def cast_category_model(source: Category) -> CategoryFull:
-    return CategoryFull.model_validate(source.model_dump())
+    cat_out = CategoryFull.model_validate(source.model_dump())
+    if source.tasks:
+        tasks = [TaskBase.model_validate(task) for task in source.tasks]
+        cat_out.tasks = tasks
+    else:
+        cat_out.tasks = []
+    return cat_out
 
 @app.on_event("startup")
 def on_startup():
@@ -122,7 +131,7 @@ def update_task(task_id: UUID, new_task: TTask, session: SessionDep) -> TaskFull
     task = session.get(Task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
-    task.sqlmodel_update(new_task.model_dump(exclude_unset=True, exclude_none=True))
+    task.sqlmodel_update(new_task.model_dump())
     session.add(task)
     session.commit()
     session.refresh(task)
@@ -152,7 +161,8 @@ def get_category(category_id: UUID, session: SessionDep) -> CategoryFull:
 
 @app.post("/categories", operation_id="create_category", response_model=TCategory)
 def create_category(category: TCategory, session: SessionDep) -> CategoryFull:
-    existing = session.exec(select(Category).where(Category.name == category.name))
+    existing = session.exec(select(Category).where(Category.name == category.name)).all()
+    print(existing)
     if existing:
         raise HTTPException(status_code=409, detail="Category already exists")
     db_category = Category.model_validate(category.model_dump(exclude_unset=True, exclude_none=True))
