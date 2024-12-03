@@ -1,6 +1,6 @@
 import { GetCategoriesResponse, TTask, TCategory } from '../client/types.gen';
 import { Grid, Box, Stack, fabStyle } from '../styles';
-import React, { ReactElement } from 'react'
+import React, { ReactElement, useEffect } from 'react'
 import { Badge, Button, Chip, Tab, Tabs } from '@mui/material';
 import TaskComponent from '../components/Task';
 import NewCategoryComponent from '../components/newCategory';
@@ -39,10 +39,21 @@ interface MainPropTypes {
 
 const Home = (props: MainPropTypes): ReactElement => {
   const { categories, createTask, updateTask, deleteTask, setCategory, deleteCategory } = props
-  const [value, setValue] = React.useState(1);
+
+  const sumTasks = (filter: string) => {
+    let sum = 0;
+    for (let i = 0; i < categories.length; i++) {
+      sum += categories[i].tasks?.filter(task => task.status === filter).length ?? 0
+    }
+    return sum;
+  }
+
+  const [value, setValue] = React.useState(sumTasks("in_prog") > 0 ? 1 : 0);
+
   const handleChange = (event: React.SyntheticEvent, newValue: number) => {
     setValue(newValue);
   };
+
 
   const renderControls = (category: TCategory) => {
     if (category.id == null) {
@@ -98,13 +109,6 @@ const Home = (props: MainPropTypes): ReactElement => {
     };
   }
 
-  const sumTasks = (filter: string) => {
-    let sum = 0;
-    for (let i = 0; i < categories.length; i++) {
-      sum += categories[i].tasks?.filter(task => task.status === filter).length ?? 0
-    }
-    return sum;
-  }
 
   const inProgressTasks = () => {
     const tasks = []
