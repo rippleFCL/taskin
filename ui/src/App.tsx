@@ -147,7 +147,7 @@ useEffect(() => {
     });
   }, [])
 
-  const newTask = (task: TTask | null, newTask: TTask) => {
+  const newTask = (newTask: TTask) => {
     createTask({
       client: apiClient,
       headers: {
@@ -159,7 +159,6 @@ useEffect(() => {
       if (error) {
         return console.error(error);
       } else {
-        console.log(data, task);
         addTaskToCategory(data as unknown as TTask);
       }
     })

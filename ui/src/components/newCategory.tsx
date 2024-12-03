@@ -1,15 +1,20 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
 import { Input, Select } from '@mui/material';
-import { TaskMode } from '../types';
 import { NoReloadButton as Button } from './NoReloadButton';
 import { TTask, StatusEnum, TCategory } from '../client/types.gen';
+import Modal from '@mui/material/Modal';
+import { modelStyle } from '../styles';
+
 
 interface NewCategoryProps {
   setCategory: (category: TCategory) => void
 }
 
 const NewCategoryComponent: React.FC<NewCategoryProps> = (props) => {
+  const [open, setOpen] = React.useState(false);
+  const handleOpen = () => setOpen(true);
+  const handleClose = () => setOpen(false);
   const { setCategory } = props;
   const taskForm = useRef<HTMLFormElement>(null);
   //
@@ -30,18 +35,30 @@ const NewCategoryComponent: React.FC<NewCategoryProps> = (props) => {
     const payload: TCategory = {
       id: null,
       name: catName,
+
     }
     setCategory(payload);
+    handleClose();
   }
   //
-  return (
+  return <>
+    <Modal
+      open={open}
+      onClose={handleClose}
+      aria-labelledby="modal-modal-title"
+      aria-describedby="modal-modal-description"
+    >
+      <Box sx={modelStyle}>
+        <h1>New Category</h1>
+        <form ref={taskForm} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); saveCategory(); } }}>
+          <Input type="text" />
+        </form>
+        <Button variant="outlined" color="primary" onClick={saveCategory}>Save</Button>
+      </Box>
+    </Modal>
     <Box p={1} m={1}>
-      <h1>New Category</h1>
-      <form ref={taskForm} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); } }}>
-        <Input type="text" />
+      <Button variant="outlined" color="primary" onClick={handleOpen}>New Category</Button>
 
-      </form>
-      <Button variant="outlined" color="primary" onClick={saveCategory}>Save</Button>
       {/* {renderControls(
             () => {
               formatAndSaveTask({
@@ -50,13 +67,12 @@ const NewCategoryComponent: React.FC<NewCategoryProps> = (props) => {
                 status: "todo",
                 category_id: null
               }, createTask);
-              setMode(TaskMode.create);
             },
             () => { }
           )} */}
     </Box>
-  );
-  //
+  </>
+
 
 };
 

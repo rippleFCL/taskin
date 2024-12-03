@@ -3,9 +3,3 @@ export enum StatusEnum {
     comp = "comp",
     in_prog = "in_prog"
 }
-
-export enum TaskMode {
-    view = "view",
-    edit = "edit",
-    create = "create"
-}
