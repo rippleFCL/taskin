@@ -13,6 +13,7 @@ import {
   Typography,
   useMediaQuery,
 } from '@mui/material';
+import { InlineBadge } from '../styles';
 import React, { ReactElement, useEffect, useState } from 'react';
 import TaskComponent from '../components/Task';
 import NewTask from '../components/newTask';
@@ -106,13 +107,13 @@ const Home = (props: MainPropTypes): ReactElement => {
           <Collapse in={isMenuOpen}>
             <Stack direction={isMobile ? 'column' : 'row'} spacing={2}>
               <Link to={routes.todo} color="info">
-                <Badge badgeContent={sumTasks("todo")} color="primary">To Do</Badge>
+                <InlineBadge badgeContent={sumTasks("todo")} color="primary">To Do</InlineBadge>
               </Link>
               <Link to={routes.in_prog} color="info">
-                <Badge badgeContent={sumTasks("in_prog")} color="primary">In Progress</Badge>
+                <InlineBadge badgeContent={sumTasks("in_prog")} color="primary">In Progress</InlineBadge>
               </Link>
               <Link to={routes.comp} color="info">
-                <Badge badgeContent={sumTasks("comp")} color="primary">Completed</Badge>
+                <InlineBadge badgeContent={sumTasks("comp")} color="primary">Completed</InlineBadge>
               </Link>
               <Link to={routes.settings} color="info">
                 Settings
@@ -125,7 +126,7 @@ const Home = (props: MainPropTypes): ReactElement => {
           <Route path={routes.in_prog} element={renderTasks(inProgressTasks())} />
           <Route path={routes.comp} element={renderCategories('comp')} />
           <Route path={routes.settings} element={
-            <Settings categories={categories} setCategory={setCategory} deleteCategory={deleteCategory}/>} />
+            <Settings categories={categories} setCategory={setCategory} deleteCategory={deleteCategory} />} />
         </Routes>
       </BrowserRouter>
       <NewTask categories={categories} createTask={createTask} />

@@ -2,15 +2,15 @@ import Grid from '@mui/material/Grid2';
 import styled from '@emotion/styled'
 import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
-import { Paper, Stack } from '@mui/material';
+import { Paper, Stack, Badge, BadgeProps } from '@mui/material';
 
-const fabStyle = {
+export const fabStyle = {
   position: 'absolute',
   bottom: 16,
   right: 16,
 };
 
-const modelStyle = {
+export const modelStyle = {
   position: 'absolute',
   top: '50%',
   left: '50%',
@@ -22,8 +22,16 @@ const modelStyle = {
   p: 4,
 };
 
+export const InlineBadge = styled(Badge)<BadgeProps>(({ theme }) => ({
+  '& .MuiBadge-badge': {
+    right: -15,
+    top: 12,
+    border: `2px solid ${theme.palette.background.paper}`,
+    padding: '0 4px',
+  },
+}));
 
-const Item = styled(Paper)(({ theme }) => ({
+export const Item = styled(Paper)(({ theme }) => ({
   backgroundColor: '#fff',
   ...theme.typography.body2,
   padding: theme.spacing(1),
@@ -35,15 +43,6 @@ const Item = styled(Paper)(({ theme }) => ({
 }));
 
 
-const OuterContainer = styled(Container)`
+export const OuterContainer = styled(Container)`
 padding: 10px;
 `
-export {
-    Item,
-    Stack,
-    fabStyle,
-    Box,
-    Grid,
-    OuterContainer,
-    modelStyle
-}
