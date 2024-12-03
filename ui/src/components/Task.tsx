@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
-import { Button, Input, Select } from '@mui/material';
+import { Input, Select } from '@mui/material';
+import { NoReloadButton as Button } from './NoReloadButton';
 import { TaskMode } from '../types';
 import { TTask, StatusEnum, TCategory } from '../client/types.gen';
 
@@ -20,9 +21,9 @@ const TaskComponent: React.FC<TaskProps> = (props) => {
 
 
   const formTitles = {
-      [TaskMode.create]: 'Create',
-      [TaskMode.edit]: 'Edit',
-      [TaskMode.view]: 'Your Todo'
+    [TaskMode.create]: 'Create',
+    [TaskMode.edit]: 'Edit',
+    [TaskMode.view]: 'Your Todo'
   }
 
   const renderControls = (save: () => void, removeTask: () => void) => {
@@ -55,7 +56,7 @@ const TaskComponent: React.FC<TaskProps> = (props) => {
       ...new_task,
       id: new_task.id ?? null,
       status: new_task.status ?? "todo",
-      category_id: (catId=== "" ? null : catId),
+      category_id: (catId === "" ? null : catId),
       name: taskForm.current?.querySelector('input')?.value ?? new_task.name,
     }
     if (save !== null) {
@@ -67,18 +68,18 @@ const TaskComponent: React.FC<TaskProps> = (props) => {
     console.log(task?.category_id)
     return <>{
       props.categories ?
-      <Select native defaultValue={task?.category_id ?? ""}>
-        {props.categories?.map((category: TCategory) => (
-          <option key={category.id} value={category.id ? category.id : ""} >{category.name}</option>
-        ))}
-      </Select> : <></>
+        <Select native defaultValue={task?.category_id ?? ""}>
+          {props.categories?.map((category: TCategory) => (
+            <option key={category.id} value={category.id ? category.id : ""} >{category.name}</option>
+          ))}
+        </Select> : <></>
     }</>
   }
-  if(task === null) {
+  if (task === null) {
     return (
       <Box p={1} m={1}>
         <h1>New Task</h1>
-        <form ref={taskForm}>
+        <form ref={taskForm} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); } }}>
           <Input type="text" />
           {catSelector()}
         </form>
@@ -95,14 +96,14 @@ const TaskComponent: React.FC<TaskProps> = (props) => {
           () => { }
         )}
 
-    </Box>
+      </Box>
     );
   }
   if (mode !== TaskMode.view) {
     return (
       <Box p={1} m={1}>
         <h1>{formTitles[mode]}</h1>
-        <form ref={taskForm}>
+        <form ref={taskForm} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); } }} >
           <Input type="text" defaultValue={task.name} />
           {catSelector()}
         </form>
