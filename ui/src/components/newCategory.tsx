@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
-import { Button, Input, Select } from '@mui/material';
+import { Input, Select } from '@mui/material';
 import { TaskMode } from '../types';
+import { NoReloadButton as Button } from './NoReloadButton';
 import { TTask, StatusEnum, TCategory } from '../client/types.gen';
 
 interface NewCategoryProps {
@@ -16,32 +17,32 @@ const NewCategoryComponent: React.FC<NewCategoryProps> = (props) => {
   //
   //
   //
-    const saveCategory = () => {
-      if (!taskForm.current) {
-        console.warn('Form not found');
-        return;
-      }
-      const catName = taskForm.current.querySelector('input')?.value
-      if (!catName) {
-        console.warn('Category name not set');
-        return;
-      }
-      const payload: TCategory = {
-        id: null,
-        name: catName,
-      }
-      setCategory(payload);
+  const saveCategory = () => {
+    if (!taskForm.current) {
+      console.warn('Form not found');
+      return;
     }
+    const catName = taskForm.current.querySelector('input')?.value
+    if (!catName) {
+      console.warn('Category name not set');
+      return;
+    }
+    const payload: TCategory = {
+      id: null,
+      name: catName,
+    }
+    setCategory(payload);
+  }
   //
-      return (
-        <Box p={1} m={1}>
-          <h1>New Category</h1>
-          <form ref={taskForm}>
-            <Input type="text" />
+  return (
+    <Box p={1} m={1}>
+      <h1>New Category</h1>
+      <form ref={taskForm} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); } }}>
+        <Input type="text" />
 
-          </form>
-          <Button variant="outlined" color="primary" onClick={saveCategory}>Save</Button>
-          {/* {renderControls(
+      </form>
+      <Button variant="outlined" color="primary" onClick={saveCategory}>Save</Button>
+      {/* {renderControls(
             () => {
               formatAndSaveTask({
                 id: null,
@@ -53,8 +54,8 @@ const NewCategoryComponent: React.FC<NewCategoryProps> = (props) => {
             },
             () => { }
           )} */}
-      </Box>
-      );
+    </Box>
+  );
   //
 
 };
