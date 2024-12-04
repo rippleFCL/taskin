@@ -1,8 +1,11 @@
 services:
   backend:
+    user: 1001:1001
     build:
       context: ./taskin-api/
       dockerfile: Dockerfile.dev
+    environment:
+      - DEV=true
     volumes:
       - ./taskin-api/:/app
     ports:

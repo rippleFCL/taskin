@@ -1,15 +1,33 @@
+from re import DEBUG
 from uuid import UUID
 from annotated_types import T
 from fastapi import FastAPI, Depends, HTTPException, Query, Request, Response
 from fastapi.routing import APIRoute
 from typing import Annotated, Sequence, Callable
-from models import Task, Category, TTask, TCategory, TaskFull, CategoryFull, StatusEnum, TaskBase, CategoryBase
+from models import (
+    Task,
+    Category,
+    TTask,
+    TCategory,
+    TaskFull,
+    CategoryFull,
+    StatusEnum,
+    TaskBase,
+    CategoryBase,
+    engine,
+    SessionDep,
+)
 from fastapi.middleware.cors import CORSMiddleware
-from sqlmodel import create_engine, Session, SQLModel, select
+from sqlmodel import Session, SQLModel, select
 import logging
+import os
+from routers.dev import router as dev_router
+
+DEBUGING = os.environ.get("DEV", "").lower() == "true"
 
 logger = logging.getLogger("uvicorn.error")
 app = FastAPI(separate_input_output_schemas=False)
+
 
 class DevLogger(APIRoute):
     def get_route_handler(self) -> Callable:
@@ -23,28 +41,18 @@ class DevLogger(APIRoute):
 
         return custom_route_handler
 
+
 app.router.route_class = DevLogger
-
-sqlite_file_name = "database.db"
-sqlite_url = f"sqlite:///{sqlite_file_name}"
-
-connect_args = {"check_same_thread": False}
-engine = create_engine(sqlite_url, connect_args=connect_args)
-
-def get_session():
-    with Session(engine) as session:
-        yield session
 
 
 def create_db_and_tables():
     SQLModel.metadata.create_all(engine)
 
 
-SessionDep = Annotated[Session, Depends(get_session)]
-
-
-origins = ["*"]
-
+if DEBUGING:
+    origins = ["*"]
+else:
+    origins = ["http://localhost:3000"]
 
 
 app.add_middleware(
@@ -58,9 +66,10 @@ app.add_middleware(
 
 def cast_task_model(source: Task) -> TaskFull:
     task = TaskFull.model_validate(source.model_dump())
-    if source.category :
+    if source.category:
         task.category = CategoryBase.model_validate(source.category.model_dump())
     return task
+
 
 def cast_category_model(source: Category) -> CategoryFull:
     cat_out = CategoryFull.model_validate(source.model_dump())
@@ -70,6 +79,7 @@ def cast_category_model(source: Category) -> CategoryFull:
     else:
         cat_out.tasks = []
     return cat_out
+
 
 @app.on_event("startup")
 def on_startup():
@@ -85,6 +95,7 @@ def read_tasks(
     tasks = session.exec(select(Task).offset(offset).limit(limit)).all()
     return [cast_task_model(task) for task in tasks]
 
+
 # @app.get("/tasks/uncategorised", operation_id="get_uncategorised_tasks", response_model=Sequence[TTask])
 # def get_uncategorised_tasks(
 #     session: SessionDep,
@@ -93,6 +104,7 @@ def read_tasks(
 # ) -> Sequence[TaskFull]:
 #
 #     return [cast_task_model(task) for task in tasks]
+
 
 @app.post("/tasks", operation_id="create_task", response_model=TTask)
 def create_task(task: TTask, session: SessionDep) -> TaskFull:
@@ -104,10 +116,12 @@ def create_task(task: TTask, session: SessionDep) -> TaskFull:
     print(db_task.model_dump())
     return cast_task_model(db_task)
 
+
 @app.get("/tasks/by-status/{status}", operation_id="get_task_by_status", response_model=Sequence[TTask])
 def get_task_by_status(status: StatusEnum, session: SessionDep) -> Sequence[TaskFull]:
     tasks = session.exec(select(Task).where(Task.status == status)).all()
     return [cast_task_model(task) for task in tasks]
+
 
 @app.get("/tasks/{task_id}", operation_id="get_task", response_model=TTask)
 def get_task(task_id: UUID, session: SessionDep) -> TaskFull:
@@ -115,6 +129,7 @@ def get_task(task_id: UUID, session: SessionDep) -> TaskFull:
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     return cast_task_model(task)
+
 
 @app.delete("/tasks/{task_id}", operation_id="delete_task", status_code=200)
 def delete_task(task_id: UUID, session: SessionDep):
@@ -146,7 +161,7 @@ def read_categories(
 ) -> Sequence[CategoryFull]:
     categories = session.exec(select(Category).offset(offset).limit(limit)).all()
     tasks = session.exec(select(Task).where(Task.category_id == None).offset(offset).limit(limit)).all()
-    tasks_full =  [TaskBase.model_validate(task.model_dump()) for task in tasks]
+    tasks_full = [TaskBase.model_validate(task.model_dump()) for task in tasks]
 
     return [cast_category_model(category) for category in categories] + [CategoryFull(name="Uncategorised", tasks=tasks_full)]
 
@@ -193,3 +208,5 @@ def update_category(category_id: UUID, new_category: TCategory, session: Session
     session.commit()
     session.refresh(category)
     return cast_category_model(category)
+
+app.router.include_router(dev_router, prefix="/dev")
