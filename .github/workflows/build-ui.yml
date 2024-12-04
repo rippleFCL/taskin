@@ -47,7 +47,7 @@ jobs:
       - name: Build image
         uses: docker/build-push-action@v6
         with:
-          context: taskin-api
+          context: ui
           push: ${{ github.event_name == 'push' }}
           platforms: ${{ env.PLATFORMS }}
           tags: ${{ steps.meta.outputs.tags }}

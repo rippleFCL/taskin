@@ -1,5 +1,4 @@
 from fastapi import APIRouter
-from pytest import fixture
 from sqlmodel import delete
 from models import Task, Category, StatusEnum, get_session, engine, SessionDep
 import uuid
