@@ -1,12 +1,11 @@
-import { BrowserRouter, Routes, Route, useParams } from 'react-router'
 import { createClient } from '@hey-api/client-fetch'
 import { createTask, getCategories, deleteTask, updateTask, createCategory, deleteCategory } from './client/sdk.gen'
 import { GetCategoriesResponse, TCategory } from './client/types.gen'
-import { OuterContainer } from './styles'
+import { OuterContainer, darkTheme } from './styles'
 import { TTask } from './client/types.gen'
 import { useState, useEffect } from 'react'
 import Main from './pages/Main'
-import { createTheme, CssBaseline, ThemeProvider } from '@mui/material'
+import { CssBaseline, ThemeProvider } from '@mui/material'
 
 const apiClient = createClient({
   baseUrl: 'http://'+window.location.hostname+':8080',
@@ -266,11 +265,6 @@ useEffect(() => {
     return <div><img src="https://cdn.dribbble.com/users/1204962/screenshots/4651504/hamster-loader.gif" alt="loading.gif" width="100px"></img></div>
   }
 
-  const darkTheme = createTheme({
-    palette: {
-      mode: 'dark',
-    }
-  })
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />

@@ -1,23 +1,20 @@
-import { GetCategoriesResponse, TTask, TCategory } from '../client/types.gen';
+import { TTask, TCategory } from '../client/types.gen';
 import {
   Accordion,
   AccordionDetails,
   AccordionSummary,
-  Badge,
   Box,
   Button,
   Collapse,
-  Grid2 as Grid,
   List,
   Stack,
-  Typography,
   useMediaQuery,
 } from '@mui/material';
 import { InlineBadge } from '../styles';
-import React, { ReactElement, useEffect, useState } from 'react';
+import { ReactElement, useEffect, useState } from 'react';
 import TaskComponent from '../components/Task';
 import NewTask from '../components/newTask';
-import { BrowserRouter, Route, Routes, useParams, Link } from 'react-router';
+import { BrowserRouter, Route, Routes, Link } from 'react-router';
 import Settings from '../components/Settings';
 
 declare module '@mui/material/Grid2' {
@@ -67,7 +64,6 @@ const Home = (props: MainPropTypes): ReactElement => {
           key={task.id}
           task={task}
           updateTask={updateTask}
-          createTask={createTask}
           deleteTask={deleteTask}
           categories={categories}
         />

@@ -1,8 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import Box from '@mui/material/Box';
-import { Input, Select } from '@mui/material';
+import { Input } from '@mui/material';
 import { NoReloadButton as Button } from './NoReloadButton';
-import { TTask, StatusEnum, TCategory } from '../client/types.gen';
+import { TCategory } from '../client/types.gen';
 import Modal from '@mui/material/Modal';
 import { modelStyle } from '../styles';
 
