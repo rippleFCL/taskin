@@ -1,8 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import Box from '@mui/material/Box';
 import { Input, Select } from '@mui/material';
 import { NoReloadButton as Button } from './NoReloadButton';
-import { TTask, StatusEnum, TCategory } from '../client/types.gen';
+import { TTask, TCategory } from '../client/types.gen';
 import Modal from '@mui/material/Modal';
 import { modelStyle, fabStyle } from '../styles';
 import Fab from '@mui/material/Fab';
@@ -50,9 +50,9 @@ const NewTask: React.FC<NewTask> = (props) => {
   //
   const catSelector = () => {
     return <>{
-      props.categories ?
+      categories ?
         <Select native defaultValue={""}>
-          {props.categories?.map((category: TCategory) => (
+          {categories?.map((category: TCategory) => (
             <option key={category.id} value={category.id ? category.id : ""} >{category.name}</option>
           ))}
         </Select> : <></>

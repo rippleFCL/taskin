@@ -1,5 +1,4 @@
-import React from 'react'
-import { Button, ButtonGroup, List, ListItem, Typography } from '@mui/material'
+import { Button, ButtonGroup, List, ListItem } from '@mui/material'
 import NewCategoryComponent from './newCategory'
 import { TCategory } from '../client/types.gen'
 

@@ -1,12 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { NoReloadButton as Button } from './NoReloadButton';
-import { TTask, StatusEnum, TCategory } from '../client/types.gen';
+import { TTask, TCategory } from '../client/types.gen';
 import { modelStyle } from "../styles";
-import { Typography, ButtonGroup, Modal, Input, Select, useMediaQuery, ListItem } from '@mui/material';
+import {  ButtonGroup, Modal, Input, Select, useMediaQuery, ListItem } from '@mui/material';
 import Box from '@mui/material/Box';
 
 interface TaskProps {
-  createTask: (task: TTask | null, newTask: TTask) => void;
   updateTask: (task: TTask | null, newTask: TTask) => void;
   deleteTask: (task: TTask) => void;
   task: TTask;
@@ -17,7 +16,7 @@ const TaskComponent: React.FC<TaskProps> = (props) => {
   const [open, setOpen] = useState(false);
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
-  const { task, createTask, updateTask, deleteTask } = props;
+  const { task, updateTask, deleteTask } = props;
   const taskForm = useRef<HTMLFormElement>(null);
   const isMobile = useMediaQuery('(max-width:600px)');
 
