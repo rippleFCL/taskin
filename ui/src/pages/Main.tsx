@@ -1,14 +1,24 @@
 import { GetCategoriesResponse, TTask, TCategory } from '../client/types.gen';
-import { Grid, Box, Stack } from '../styles';
-import React, { ReactElement } from 'react'
-import { TaskMode } from '../types';
-import { Badge, Button, Chip, Tab, Tabs } from '@mui/material';
+import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
+  Badge,
+  Box,
+  Button,
+  Collapse,
+  Grid2 as Grid,
+  List,
+  Stack,
+  Typography,
+  useMediaQuery,
+} from '@mui/material';
+import { InlineBadge } from '../styles';
+import React, { ReactElement, useEffect, useState } from 'react';
 import TaskComponent from '../components/Task';
-import NewCategoryComponent from '../components/newCategory';
-import { create } from '@mui/material/styles/createTransitions';
-import { deleteCategory } from '../client';
-import CustomTabPanel from '../components/TabPannle';
-
+import NewTask from '../components/newTask';
+import { BrowserRouter, Route, Routes, useParams, Link } from 'react-router';
+import Settings from '../components/Settings';
 
 declare module '@mui/material/Grid2' {
   interface GridPropsVariantOverrides {
@@ -18,56 +28,29 @@ declare module '@mui/material/Grid2' {
 
 interface MainPropTypes {
   categories: TCategory[],
-  createTask: (task: TTask | null, newTask: TTask) => void
+  createTask: (newTask: TTask) => void
   updateTask: (task: TTask | null, newTask: TTask) => void
   deleteTask: (task: TTask) => void;
   setCategory: (category: TCategory) => void
   deleteCategory: (category: TCategory) => void
+}
 
+const routes = {
+  todo: 'todo',
+  in_prog: 'wip',
+  comp: 'done',
+  settings: 'settings'
 }
 
 const Home = (props: MainPropTypes): ReactElement => {
   const { categories, createTask, updateTask, deleteTask, setCategory, deleteCategory } = props
-  const [value, setValue] = React.useState(1);
-  const handleChange = (event: React.SyntheticEvent, newValue: number) => {
-    setValue(newValue);
-  };
+  const isMobile = useMediaQuery('(max-width:600px)');
+  const [isMenuOpen, setMenuOpen] = useState(!isMobile);
+  // const selectedStatus = useParams<{ status: string }>().status ?? 'todo';
 
-  const renderControls = (category: TCategory) => {
-    if (category.id == null) {
-      return <></>
-    }
-
-    return <Button variant="outlined" color="primary" onClick={() => { deleteCategory(category) }}>Delete Category</Button>
-  }
-
-  const renderCategory = (filter: string) => {
-    return <>{categories.map((category: TCategory) => (
-          <Grid key={category.name}> {/*<GridItem key={category.uuid}>*/}
-            <h1>{category.name}</h1>
-            {(category.tasks ? category.tasks : []).map((task: TTask) => (task.status === filter &&
-              <Stack key={task.id}>
-                <TaskComponent
-                  key={task.id}
-                  task={task}
-                  updateTask={updateTask}
-                  createTask={createTask}
-                  deleteTask={deleteTask}
-                  categories={categories}
-                  mode={TaskMode.view}
-                />
-              </Stack>
-            ))}
-          </Grid>
-        ))}</>
-  }
-
-  function a11yProps(index: number) {
-    return {
-      id: `simple-tab-${index}`,
-      'aria-controls': `simple-tabpanel-${index}`,
-    };
-  }
+  useEffect(() => {
+    setMenuOpen(!isMobile)
+  }, [isMobile])
 
   const sumTasks = (filter: string) => {
     let sum = 0;
@@ -77,73 +60,76 @@ const Home = (props: MainPropTypes): ReactElement => {
     return sum;
   }
 
+  const renderTasks = (tasks: TTask[] | undefined | null) => {
+    return <List aria-label="simple table">
+      {(tasks ?? []).map((task: TTask) => (
+        <TaskComponent
+          key={task.id}
+          task={task}
+          updateTask={updateTask}
+          createTask={createTask}
+          deleteTask={deleteTask}
+          categories={categories}
+        />
+      ))}
+    </List>
+  }
+
+  const renderCategories = (filter: string) => {
+    return <>{categories.map((category: TCategory) => (
+      <Accordion key={category.id} defaultExpanded={(category.tasks ?? []).filter(task => task.status === filter).length > 0 ? true : false} expanded={(category.tasks ?? []).filter(task => task.status === filter).length > 0 ? true : false}>
+        <AccordionSummary
+          aria-controls={"panel-" + category.name + "-content"}
+          id={"panel-" + category.name + "-header"}
+        >
+          {category.name}
+        </AccordionSummary>
+        <AccordionDetails>
+          {renderTasks(category.tasks?.filter(task => task.status === filter))}
+        </AccordionDetails>
+      </Accordion>
+    ))}</>
+  }
+
+  const inProgressTasks = () => {
+    const tasks = []
+    for (let i = 0; i < categories.length; i++) {
+      tasks.push(...(categories[i].tasks?.filter((task) => task.status === 'in_prog')) ?? [])
+    }
+    return tasks
+  }
 
   return (
     <Box>
-      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-        <Tabs variant="fullWidth" value={value} onChange={handleChange} aria-label="basic tabs example">
-          <Tab label={<>Todo<Chip label={sumTasks('todo')} /></>} {...a11yProps(0)} />
-          <Tab label={ <>In Progress <Chip label={sumTasks('in_prog')} /></>} {...a11yProps(1)} />
-          <Tab label={<>Completed <Chip label={sumTasks('comp')} /></>} {...a11yProps(2)} />
-          <Tab label="Category Management" {...a11yProps(3)} />
-
-        </Tabs>
-      </Box>
-      <CustomTabPanel value={value} index={0}>
-        {renderCategory('todo')}
-        <Stack>
-          <TaskComponent
-            task={null}
-            updateTask={updateTask}
-            createTask={createTask}
-            deleteTask={deleteTask}
-            categories={categories}
-            mode={TaskMode.create}
-          />
-        </Stack>
-      </CustomTabPanel>
-      <CustomTabPanel value={value} index={1}>
-        <Grid >
-          <h1>In Progress</h1>
-
-          {categories.map((category: TCategory) => (
-            (category.tasks ? category.tasks : []).map((task: TTask) => (task.status === "in_prog" &&
-              <Stack key={task.id}>
-                <TaskComponent
-                  key={task.id}
-                  task={task}
-                  updateTask={updateTask}
-                  createTask={createTask}
-                  deleteTask={deleteTask}
-                  categories={categories}
-                  mode={TaskMode.view}
-                />
-              </Stack>
-            ))
-          ))}
-        </Grid>
-      </CustomTabPanel>
-      <CustomTabPanel value={value} index={2}>
-        {renderCategory('comp')}
-      </CustomTabPanel>
-      <CustomTabPanel value={value} index={3}>
-        <Grid>
-          <Grid>
-            <h1>Categories</h1>
-
-            {categories.map((category: TCategory) => (
-              <Grid key={category.id}>
-                <h1>{category.name}</h1>
-                {renderControls(category)}
-              </Grid>
-            ))}
-          </Grid>
-          <Grid>
-            <NewCategoryComponent setCategory={setCategory} />
-          </Grid>
-        </Grid>
-      </CustomTabPanel>
-
+      <BrowserRouter>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', marginTop: '.25rem' }} >
+          <Button sx={{ display: isMobile ? 'initial' : 'none' }} onClick={() => setMenuOpen(!isMenuOpen)}>{isMenuOpen ? 'Close' : 'Open'}</Button>
+          <Collapse in={isMenuOpen}>
+            <Stack direction={isMobile ? 'column' : 'row'} spacing={2}>
+              <Link to={routes.todo} color="info">
+                <InlineBadge badgeContent={sumTasks("todo")} color="primary">To Do</InlineBadge>
+              </Link>
+              <Link to={routes.in_prog} color="info">
+                <InlineBadge badgeContent={sumTasks("in_prog")} color="primary">In Progress</InlineBadge>
+              </Link>
+              <Link to={routes.comp} color="info">
+                <InlineBadge badgeContent={sumTasks("comp")} color="primary">Completed</InlineBadge>
+              </Link>
+              <Link to={routes.settings} color="info">
+                Settings
+              </Link>
+            </Stack>
+          </Collapse>
+        </Box>
+        <Routes>
+          <Route path={routes.todo} element={renderCategories('todo')} />
+          <Route path={routes.in_prog} element={renderTasks(inProgressTasks())} />
+          <Route path={routes.comp} element={renderCategories('comp')} />
+          <Route path={routes.settings} element={
+            <Settings categories={categories} setCategory={setCategory} deleteCategory={deleteCategory} />} />
+        </Routes>
+      </BrowserRouter>
+      <NewTask categories={categories} createTask={createTask} />
     </Box>
   )
 }
