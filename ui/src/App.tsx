@@ -8,7 +8,7 @@ import Main from './pages/Main'
 import { CssBaseline, ThemeProvider } from '@mui/material'
 
 const apiClient = createClient({
-  baseUrl: 'http://'+window.location.hostname+':8080',
+  baseUrl: window.location.origin+'/api',
   headers: {
     Authorization: 'Bearer <token_from_service_client>',
   },
