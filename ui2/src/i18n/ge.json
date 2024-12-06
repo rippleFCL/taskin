@@ -1,0 +1,13 @@
+{
+  "homepage": {
+    "title": "Willkommen bei Tasker"
+  },
+  "category": {
+    "none_found": "Keine Kategorie gefunden."
+  },
+  "task": {
+    "delete": "Löschen",
+    "update": "Speichern",
+    "none_found": "Keine Aufgabe gefunden."
+  }
+}
