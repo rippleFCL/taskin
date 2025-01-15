@@ -1,4 +1,3 @@
-from re import DEBUG
 from uuid import UUID
 from annotated_types import T
 from fastapi import FastAPI, Depends, HTTPException, Query, Request, Response
@@ -21,9 +20,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Session, SQLModel, select
 import logging
 import os
-from routers.dev import router as dev_router
 
-DEBUGING = os.environ.get("DEV", "").lower() == "true"
+DEBUG = os.environ.get("DEV", "").lower() == "true"
 
 logger = logging.getLogger("uvicorn.error")
 app = FastAPI(separate_input_output_schemas=False)
@@ -49,7 +47,7 @@ def create_db_and_tables():
     SQLModel.metadata.create_all(engine)
 
 
-if DEBUGING:
+if DEBUG:
     origins = ["*"]
 else:
     origins = ["http://localhost:3000"]
@@ -209,4 +207,7 @@ def update_category(category_id: UUID, new_category: TCategory, session: Session
     session.refresh(category)
     return cast_category_model(category)
 
-app.router.include_router(dev_router, prefix="/dev")
+if DEBUG:
+    from routers.dev import router as dev_router
+
+    app.router.include_router(dev_router, prefix="/dev")
