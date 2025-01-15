@@ -6,6 +6,7 @@ COPY ./pyproject.toml /work
 COPY ./poetry.lock /work
 
 RUN pip install --no-cache-dir poetry && \
+    poetry self add poetry-plugin-export && \
     poetry export --without-hashes -f requirements.txt --output requirements.txt && \
     poetry export --without-hashes -f requirements.txt --dev --output requirements-dev.txt
 
