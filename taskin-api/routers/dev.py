@@ -1,9 +1,6 @@
-from email.policy import HTTP
-import faker
 from fastapi import APIRouter, HTTPException
 from sqlmodel import delete
-from models import Task, Category, StatusEnum, get_session, engine, SessionDep
-import uuid
+from models import Task, Category, StatusEnum, SessionDep
 import os
 DEBUGING = os.environ.get("DEV", "").lower() == "true"
 

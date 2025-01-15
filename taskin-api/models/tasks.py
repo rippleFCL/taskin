@@ -1,5 +1,4 @@
 from enum import Enum
-from unicodedata import category
 from uuid import UUID, uuid4
 
 from sqlmodel import Field, SQLModel, Relationship

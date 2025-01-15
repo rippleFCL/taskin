@@ -1,6 +1,5 @@
 from uuid import UUID
-from annotated_types import T
-from fastapi import FastAPI, Depends, HTTPException, Query, Request, Response
+from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.routing import APIRoute
 from typing import Annotated, Sequence, Callable
 from models import (
@@ -17,7 +16,7 @@ from models import (
     SessionDep,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from sqlmodel import Session, SQLModel, select
+from sqlmodel import SQLModel, select
 import logging
 import os
 
