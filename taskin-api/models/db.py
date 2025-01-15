@@ -1,8 +1,9 @@
+from os import environ
 from sqlmodel import create_engine, Session
 from fastapi import Depends
 from typing import Annotated
 
-sqlite_file_name = "database.db"
+sqlite_file_name = environ.get("DB_PATH", "database.db")
 sqlite_url = f"sqlite:///{sqlite_file_name}"
 
 connect_args = {"check_same_thread": False}
