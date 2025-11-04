@@ -7,7 +7,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}-api
+  IMAGE_NAME: ${{ github.repository }}
   PLATFORMS: linux/amd64
 
 jobs:
