@@ -2,9 +2,21 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Taskin'</title>
+    <meta name="description" content="Taskin - Simple todo management with categories" />
+  <meta name="theme-color" content="#0ea5e9" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+    <title>Taskin</title>
+    <script>
+      (function() {
+        try {
+          var saved = localStorage.getItem('theme');
+          var prefers = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var dark = saved ? (saved === 'dark') : prefers;
+          if (dark) document.documentElement.classList.add('dark');
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

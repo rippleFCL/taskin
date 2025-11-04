@@ -1,6 +1,0 @@
-{% from "macro/category_collection.html" import category_collection %}
-{% extends "base/layout.html" %}
-{% block content %}
-{{ category_collection(uncompleted_categories, 'Todo', 'todo') }}
-{{ category_collection(completed_categories, 'Completed', 'comp') }}
-{% endblock %}

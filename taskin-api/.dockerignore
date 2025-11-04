@@ -1,2 +1,24 @@
+# Ignore poetry lock file for faster builds if not using exact versions
+poetry.lock
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
 .venv/
+venv/
+ENV/
+
+# Database (will be created in container)
 *.db
+*.sqlite
+*.sqlite3
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
