@@ -7,6 +7,8 @@ import { RefreshCw, RotateCcw, ListTodo, Sparkles, Check, Circle, CircleDashed, 
 import { Collapsible, CollapsibleContent } from './components/ui/collapsible';
 import { NavigationMenu, NavigationMenuItem, NavigationMenuList } from './components/ui/navigation-menu';
 import { Button } from './components/ui/button';
+import { Card, CardContent } from './components/ui/card';
+import { Progress } from './components/ui/progress';
 import './App.css';
 import MermaidGraphView from './components/MermaidGraphView';
 
@@ -52,6 +54,28 @@ function App() {
         return prefersDark ? 'dark' : 'light';
     });
     const [navOpen, setNavOpen] = useState(false);
+
+    // Summary metrics for All Tasks tab
+    const allTodos = useMemo(() => categories.flatMap(c => c.todos), [categories]);
+    const summary = useMemo(() => {
+        const total = allTodos.length;
+        let incomplete = 0, inProgress = 0, complete = 0;
+        for (const t of allTodos) {
+            if (t.status === 'incomplete') incomplete++;
+            else if (t.status === 'in-progress') inProgress++;
+            else if (t.status === 'complete') complete++;
+        }
+        const percentComplete = total > 0 ? Math.round((complete / total) * 100) : 0;
+        return {
+            total,
+            categories: categories.length,
+            incomplete,
+            inProgress,
+            complete,
+            percentComplete,
+            readyNow: recommendedTodos.length,
+        };
+    }, [allTodos, categories.length, recommendedTodos.length]);
 
     // One-offs sorted: in-progress first, then incomplete, then complete; stable within groups
     const sortedOneOffs = useMemo(() => {
@@ -688,6 +712,46 @@ function App() {
                 {currentTab === 'all' ? (
                     <>
                         <div className="space-y-4">
+                            {/* Summary bar */}
+                            <Card className="bg-background/60">
+                                <CardContent className="pt-6">
+                                    <div className="flex items-center justify-between gap-4 mb-3">
+                                        <div className="text-sm text-muted-foreground">
+                                            Overview
+                                        </div>
+                                        <div className="text-xs text-muted-foreground">
+                                            {summary.complete}/{summary.total} complete
+                                        </div>
+                                    </div>
+                                    <Progress value={summary.percentComplete} />
+                                    <div className="mt-4 grid grid-cols-2 sm:grid-cols-6 gap-3 text-sm">
+                                        <div className="rounded-md border p-3 bg-muted/40">
+                                            <div className="text-muted-foreground text-xs">Total</div>
+                                            <div className="font-medium">{summary.total}</div>
+                                        </div>
+                                        <div className="rounded-md border p-3 bg-muted/40">
+                                            <div className="text-muted-foreground text-xs">Ready now</div>
+                                            <div className="font-medium">{summary.readyNow}</div>
+                                        </div>
+                                        <div className="rounded-md border p-3 bg-muted/40">
+                                            <div className="flex items-center gap-1 text-xs text-muted-foreground"><Check className="w-3 h-3" /> Complete</div>
+                                            <div className="font-medium">{summary.complete}</div>
+                                        </div>
+                                        <div className="rounded-md border p-3 bg-muted/40">
+                                            <div className="flex items-center gap-1 text-xs text-muted-foreground"><CircleDashed className="w-3 h-3" /> In Progress</div>
+                                            <div className="font-medium">{summary.inProgress}</div>
+                                        </div>
+                                        <div className="rounded-md border p-3 bg-muted/40">
+                                            <div className="flex items-center gap-1 text-xs text-muted-foreground"><Circle className="w-3 h-3" /> Incomplete</div>
+                                            <div className="font-medium">{summary.incomplete}</div>
+                                        </div>
+                                        <div className="rounded-md border p-3 bg-muted/40">
+                                            <div className="text-muted-foreground text-xs">Categories</div>
+                                            <div className="font-medium">{summary.categories}</div>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
                             {categories.length === 0 ? (
                                 <div className="text-center py-12 text-muted-foreground">
                                     No categories found
