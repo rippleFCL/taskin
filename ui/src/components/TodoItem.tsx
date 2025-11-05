@@ -1,6 +1,7 @@
 import { Todo, TaskStatus } from '../types';
 import { Button } from './ui/button';
 import { Check, Circle, CircleDashed } from 'lucide-react';
+import { Badge } from './ui/badge';
 
 interface TodoItemProps {
     todo: Todo;
@@ -35,43 +36,70 @@ export function TodoItem({ todo, onStatusChange }: TodoItemProps) {
         }
     };
 
+    const statuses: TaskStatus[] = ['incomplete', 'in-progress', 'complete'];
+
     return (
         <div className="py-4">
-            <div className="mb-2">
-                <h4 className="text-base font-medium text-foreground">{todo.title}</h4>
-                {todo.description && (
-                    <p className="text-sm text-muted-foreground">{todo.description}</p>
-                )}
+            <div className="mb-2 flex items-start justify-between gap-3">
+                <div className="flex-1">
+                    <h4 className="text-base font-medium text-foreground flex items-center gap-2">
+                        {todo.title}
+                        <Badge variant="outline" className="hidden sm:inline-flex">{getStatusLabel(todo.status).replace(/^[^\s]+\s*/, '')}</Badge>
+                    </h4>
+                    {todo.description && (
+                        <p className="text-sm text-muted-foreground">{todo.description}</p>
+                    )}
+                </div>
+                {/* Small colored dot for quick glance */}
+                <div className="ml-2 mt-1">
+                    <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: getStatusColor(todo.status) }} title={getStatusLabel(todo.status)} />
+                </div>
             </div>
 
             <div className="flex flex-wrap gap-2 mb-2">
-                <Button
-                    variant={todo.status === 'incomplete' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => handleStatusChange('incomplete')}
-                    aria-label="Mark as incomplete"
-                >
-                    <Circle className="w-4 h-4 sm:mr-2 shrink-0" /> <span className="hidden sm:inline">Incomplete</span>
-                </Button>
-                <Button
-                    variant={todo.status === 'in-progress' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => handleStatusChange('in-progress')}
-                    aria-label="Mark as in progress"
-                >
-                    <CircleDashed className="w-4 h-4 sm:mr-2 shrink-0" /> <span className="hidden sm:inline">In Progress</span>
-                </Button>
-                <Button
-                    variant={todo.status === 'complete' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => handleStatusChange('complete')}
-                    aria-label="Mark as complete"
-                >
-                    <Check className="w-4 h-4 sm:mr-2 shrink-0" /> <span className="hidden sm:inline">Complete</span>
-                </Button>
+                {statuses.filter(s => s !== todo.status).map(s => {
+                    if (s === 'incomplete') {
+                        return (
+                            <Button
+                                key={s}
+                                variant={s === todo.status ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => handleStatusChange('incomplete')}
+                                aria-label="Mark as incomplete"
+                            >
+                                <Circle className="w-4 h-4 sm:mr-2 shrink-0" /> <span className="hidden sm:inline">Incomplete</span>
+                            </Button>
+                        );
+                    }
+                    if (s === 'in-progress') {
+                        return (
+                            <Button
+                                key={s}
+                                variant={s === todo.status ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => handleStatusChange('in-progress')}
+                                aria-label="Mark as in progress"
+                            >
+                                <CircleDashed className="w-4 h-4 sm:mr-2 shrink-0" /> <span className="hidden sm:inline">In Progress</span>
+                            </Button>
+                        );
+                    }
+                    return (
+                        <Button
+                            key={s}
+                            variant={s === todo.status ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => handleStatusChange('complete')}
+                            aria-label="Mark as complete"
+                        >
+                            <Check className="w-4 h-4 sm:mr-2 shrink-0" /> <span className="hidden sm:inline">Complete</span>
+                        </Button>
+                    );
+                })}
             </div>
 
-            <div className="text-sm font-medium" style={{ color: getStatusColor(todo.status) }}>
+            {/* Keep an accessible textual label for screen-readers and smaller screens */}
+            <div className="text-sm font-medium sm:hidden" style={{ color: getStatusColor(todo.status) }}>
                 {getStatusLabel(todo.status)}
             </div>
         </div>

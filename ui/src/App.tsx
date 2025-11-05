@@ -782,53 +782,50 @@ function App() {
                             </div>
                         ) : (
                             <div className="space-y-3">
-                                {recommendedTodos.map(todo => (
-                                    <div
-                                        key={todo.id}
-                                        className="p-4 bg-muted/50 rounded-lg border"
-                                    >
-                                        <div className="flex items-start gap-2 mb-2">
-                                            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-primary text-primary-foreground">
-                                                {todo.category.name}
-                                            </span>
-                                            <h4 className="font-medium flex-1">{todo.title}</h4>
+                                {recommendedTodos.map(todo => {
+                                    const statuses: ('incomplete' | 'in-progress' | 'complete')[] = ['incomplete', 'in-progress', 'complete'];
+                                    return (
+                                        <div
+                                            key={todo.id}
+                                            className="p-4 bg-muted/50 rounded-lg border"
+                                        >
+                                            <div className="flex items-start gap-2 mb-2">
+                                                <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-primary text-primary-foreground">
+                                                    {todo.category.name}
+                                                </span>
+                                                <h4 className="font-medium flex-1 flex items-center gap-2">
+                                                    {todo.title}
+                                                    <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-md bg-background/40 text-muted-foreground">{todo.status === 'in-progress' ? 'In Progress' : todo.status === 'complete' ? 'Complete' : 'Incomplete'}</span>
+                                                </h4>
+                                                <div className="ml-2 mt-1">
+                                                    <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: todo.status === 'complete' ? '#22c55e' : todo.status === 'in-progress' ? '#3b82f6' : '#64748b' }} title={todo.status} />
+                                                </div>
+                                            </div>
+                                            {todo.description && (
+                                                <p className="text-sm text-muted-foreground mb-3">
+                                                    {todo.description}
+                                                </p>
+                                            )}
+                                            <div className="flex flex-wrap gap-2">
+                                                {statuses.filter(s => s !== todo.status).map(s => {
+                                                    if (s === 'incomplete') {
+                                                        return (
+                                                            <Button key={s} size="sm" variant={s === todo.status ? 'default' : 'outline'} onClick={() => handleStatusChange(todo.id, 'incomplete')} aria-label="Mark as incomplete"><Circle className="w-4 h-4 sm:mr-2 shrink-0" /><span className="hidden sm:inline">Incomplete</span></Button>
+                                                        );
+                                                    }
+                                                    if (s === 'in-progress') {
+                                                        return (
+                                                            <Button key={s} size="sm" variant={s === todo.status ? 'default' : 'outline'} onClick={() => handleStatusChange(todo.id, 'in-progress')} aria-label="Mark as in progress"><CircleDashed className="w-4 h-4 sm:mr-2 shrink-0" /><span className="hidden sm:inline">In Progress</span></Button>
+                                                        );
+                                                    }
+                                                    return (
+                                                        <Button key={s} size="sm" variant={s === todo.status ? 'default' : 'outline'} onClick={() => handleStatusChange(todo.id, 'complete')} aria-label="Mark as complete"><Check className="w-4 h-4 sm:mr-2 shrink-0" /><span className="hidden sm:inline">Complete</span></Button>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
-                                        {todo.description && (
-                                            <p className="text-sm text-muted-foreground mb-3">
-                                                {todo.description}
-                                            </p>
-                                        )}
-                                        <div className="flex flex-wrap gap-2">
-                                            <Button
-                                                variant={todo.status === 'incomplete' ? 'default' : 'outline'}
-                                                size="sm"
-                                                onClick={() => handleStatusChange(todo.id, 'incomplete')}
-                                                aria-label="Mark as incomplete"
-                                            >
-                                                <Circle className="w-4 h-4 sm:mr-2 shrink-0" />
-                                                <span className="hidden sm:inline">Incomplete</span>
-                                            </Button>
-                                            <Button
-                                                variant={todo.status === 'in-progress' ? 'default' : 'outline'}
-                                                size="sm"
-                                                onClick={() => handleStatusChange(todo.id, 'in-progress')}
-                                                aria-label="Mark as in progress"
-                                            >
-                                                <CircleDashed className="w-4 h-4 sm:mr-2 shrink-0" />
-                                                <span className="hidden sm:inline">In Progress</span>
-                                            </Button>
-                                            <Button
-                                                variant={todo.status === 'complete' ? 'default' : 'outline'}
-                                                size="sm"
-                                                onClick={() => handleStatusChange(todo.id, 'complete')}
-                                                aria-label="Mark as complete"
-                                            >
-                                                <Check className="w-4 h-4 sm:mr-2 shrink-0" />
-                                                <span className="hidden sm:inline">Complete</span>
-                                            </Button>
-                                        </div>
-                                    </div>
-                                ))}
+                                    )
+                                })}
                             </div>
                         )}
                     </div>
@@ -934,7 +931,11 @@ function App() {
                                                     </div>
                                                 ) : (
                                                     <>
-                                                        <h4 className="font-medium">{item.title}</h4>
+                                                        <h4 className="font-medium flex items-center gap-2">
+                                                            {item.title}
+                                                            <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-md bg-background/40 text-muted-foreground">{item.status === 'in-progress' ? 'In Progress' : item.status === 'complete' ? 'Complete' : 'Incomplete'}</span>
+                                                            <span className="ml-1 inline-block w-2.5 h-2.5 rounded-full" style={{ background: item.status === 'complete' ? '#22c55e' : item.status === 'in-progress' ? '#3b82f6' : '#64748b' }} />
+                                                        </h4>
                                                         {item.description && (
                                                             <p className="text-sm text-muted-foreground">{item.description}</p>
                                                         )}
@@ -1032,81 +1033,66 @@ function App() {
                                         </div>
                                         {/* Status buttons row below title/description */}
                                         <div className="mt-3 flex flex-wrap gap-2">
-                                            <Button
-                                                variant={item.status === 'incomplete' ? 'default' : 'outline'}
-                                                size="sm"
-                                                onClick={async () => {
-                                                    // Optimistic update
-                                                    setOneOffs(prev => {
-                                                        const list = prev.map(o => o.id === item.id ? { ...o, status: 'incomplete' as TaskStatus } : o);
-                                                        try { localStorage.setItem(LS_ONEOFFS, JSON.stringify(list)); } catch { }
-                                                        return list;
-                                                    });
-                                                    const canSync = navigator.onLine && serverOnline;
-                                                    try {
-                                                        if (canSync) await api.updateOneOffStatus(item.id, 'incomplete');
-                                                        else {
+                                            {(['incomplete', 'in-progress', 'complete'] as const).filter(s => s !== item.status).map(s => {
+                                                const disabled = editingId === item.id;
+                                                if (s === 'incomplete') return (
+                                                    <Button key={s} size="sm" variant={s === item.status ? 'default' : 'outline'} onClick={async () => {
+                                                        // Optimistic update
+                                                        setOneOffs(prev => {
+                                                            const list = prev.map(o => o.id === item.id ? { ...o, status: 'incomplete' as TaskStatus } : o);
+                                                            try { localStorage.setItem(LS_ONEOFFS, JSON.stringify(list)); } catch { }
+                                                            return list;
+                                                        });
+                                                        const canSync = navigator.onLine && serverOnline;
+                                                        try {
+                                                            if (canSync) await api.updateOneOffStatus(item.id, 'incomplete');
+                                                            else {
+                                                                setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'status' as const, id: item.id, status: 'incomplete' as TaskStatus }]); saveOneOffPending(next); return next; });
+                                                            }
+                                                        } catch (e) {
                                                             setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'status' as const, id: item.id, status: 'incomplete' as TaskStatus }]); saveOneOffPending(next); return next; });
                                                         }
-                                                    } catch (e) {
-                                                        setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'status' as const, id: item.id, status: 'incomplete' as TaskStatus }]); saveOneOffPending(next); return next; });
-                                                    }
-                                                }}
-                                                disabled={editingId === item.id}
-                                            >
-                                                <Circle className="w-4 h-4 sm:mr-2 shrink-0" />
-                                                <span className="hidden sm:inline">Incomplete</span>
-                                            </Button>
-                                            <Button
-                                                variant={item.status === 'in-progress' ? 'default' : 'outline'}
-                                                size="sm"
-                                                onClick={async () => {
-                                                    // Optimistic update
-                                                    setOneOffs(prev => {
-                                                        const list = prev.map(o => o.id === item.id ? { ...o, status: 'in-progress' as TaskStatus } : o);
-                                                        try { localStorage.setItem(LS_ONEOFFS, JSON.stringify(list)); } catch { }
-                                                        return list;
-                                                    });
-                                                    const canSync = navigator.onLine && serverOnline;
-                                                    try {
-                                                        if (canSync) await api.updateOneOffStatus(item.id, 'in-progress');
-                                                        else {
+                                                    }} disabled={disabled} aria-label="Mark as incomplete"><Circle className="w-4 h-4 sm:mr-2 shrink-0" /><span className="hidden sm:inline">Incomplete</span></Button>
+                                                )
+                                                if (s === 'in-progress') return (
+                                                    <Button key={s} size="sm" variant={s === item.status ? 'default' : 'outline'} onClick={async () => {
+                                                        // Optimistic update
+                                                        setOneOffs(prev => {
+                                                            const list = prev.map(o => o.id === item.id ? { ...o, status: 'in-progress' as TaskStatus } : o);
+                                                            try { localStorage.setItem(LS_ONEOFFS, JSON.stringify(list)); } catch { }
+                                                            return list;
+                                                        });
+                                                        const canSync = navigator.onLine && serverOnline;
+                                                        try {
+                                                            if (canSync) await api.updateOneOffStatus(item.id, 'in-progress');
+                                                            else {
+                                                                setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'status' as const, id: item.id, status: 'in-progress' as TaskStatus }]); saveOneOffPending(next); return next; });
+                                                            }
+                                                        } catch (e) {
                                                             setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'status' as const, id: item.id, status: 'in-progress' as TaskStatus }]); saveOneOffPending(next); return next; });
                                                         }
-                                                    } catch (e) {
-                                                        setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'status' as const, id: item.id, status: 'in-progress' as TaskStatus }]); saveOneOffPending(next); return next; });
-                                                    }
-                                                }}
-                                                disabled={editingId === item.id}
-                                            >
-                                                <CircleDashed className="w-4 h-4 sm:mr-2 shrink-0" />
-                                                <span className="hidden sm:inline">In Progress</span>
-                                            </Button>
-                                            <Button
-                                                variant={item.status === 'complete' ? 'default' : 'outline'}
-                                                size="sm"
-                                                onClick={async () => {
-                                                    // Optimistic update
-                                                    setOneOffs(prev => {
-                                                        const list = prev.map(o => o.id === item.id ? { ...o, status: 'complete' as TaskStatus } : o);
-                                                        try { localStorage.setItem(LS_ONEOFFS, JSON.stringify(list)); } catch { }
-                                                        return list;
-                                                    });
-                                                    const canSync = navigator.onLine && serverOnline;
-                                                    try {
-                                                        if (canSync) await api.updateOneOffStatus(item.id, 'complete');
-                                                        else {
+                                                    }} disabled={disabled} aria-label="Mark as in progress"><CircleDashed className="w-4 h-4 sm:mr-2 shrink-0" /><span className="hidden sm:inline">In Progress</span></Button>
+                                                )
+                                                return (
+                                                    <Button key={s} size="sm" variant={s === item.status ? 'default' : 'outline'} onClick={async () => {
+                                                        // Optimistic update
+                                                        setOneOffs(prev => {
+                                                            const list = prev.map(o => o.id === item.id ? { ...o, status: 'complete' as TaskStatus } : o);
+                                                            try { localStorage.setItem(LS_ONEOFFS, JSON.stringify(list)); } catch { }
+                                                            return list;
+                                                        });
+                                                        const canSync = navigator.onLine && serverOnline;
+                                                        try {
+                                                            if (canSync) await api.updateOneOffStatus(item.id, 'complete');
+                                                            else {
+                                                                setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'status' as const, id: item.id, status: 'complete' as TaskStatus }]); saveOneOffPending(next); return next; });
+                                                            }
+                                                        } catch (e) {
                                                             setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'status' as const, id: item.id, status: 'complete' as TaskStatus }]); saveOneOffPending(next); return next; });
                                                         }
-                                                    } catch (e) {
-                                                        setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'status' as const, id: item.id, status: 'complete' as TaskStatus }]); saveOneOffPending(next); return next; });
-                                                    }
-                                                }}
-                                                disabled={editingId === item.id}
-                                            >
-                                                <Check className="w-4 h-4 sm:mr-2 shrink-0" />
-                                                <span className="hidden sm:inline">Complete</span>
-                                            </Button>
+                                                    }} disabled={disabled} aria-label="Mark as complete"><Check className="w-4 h-4 sm:mr-2 shrink-0" /><span className="hidden sm:inline">Complete</span></Button>
+                                                )
+                                            })}
                                         </div>
                                     </div>
                                 ))}
