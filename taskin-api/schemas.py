@@ -25,6 +25,8 @@ class TodoResponse(ORMModel):
     description: Optional[str]
     status: TaskStatus
     category_id: int
+    reset_interval: int = 1
+    reset_count: int = 0
 
 
 class CategoryWithTodos(CategoryResponse):
@@ -60,3 +62,34 @@ class OneOffTodoResponse(ORMModel):
     title: str
     description: Optional[str]
     status: TaskStatus
+
+
+# Dependency graph schemas
+class DependencyNode(BaseModel):
+    """A node in the dependency graph representing a todo"""
+
+    id: int
+    title: str
+    category: str
+    status: TaskStatus
+    reset_interval: int
+
+
+class DependencyEdge(BaseModel):
+    """An edge in the dependency graph representing a dependency relationship"""
+
+    from_todo_id: int
+    from_todo_title: str
+    to_todo_id: Optional[int] = None
+    to_todo_title: Optional[str] = None
+    depends_on_all_oneoffs: bool = False
+    dependency_type: str  # "todo", "category", or "all_oneoffs"
+
+
+class DependencyGraph(BaseModel):
+    """Complete dependency graph with nodes and edges"""
+
+    nodes: List[DependencyNode]
+    edges: List[DependencyEdge]
+    categories: List[CategoryResponse]
+    oneoff_count: int

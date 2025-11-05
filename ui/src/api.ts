@@ -1,4 +1,4 @@
-import { CategoryWithTodos, TaskStatus, TodoWithCategory, OneOffTodo } from './types';
+import { CategoryWithTodos, TaskStatus, TodoWithCategory, OneOffTodo, DependencyGraph } from './types';
 
 const API_BASE = '/api';
 
@@ -34,14 +34,6 @@ export const api = {
       method: 'PATCH',
     });
     if (!response.ok) throw new Error('Failed to update todo status');
-  },
-
-  async resetAllTodos(): Promise<{ message: string; count: number }> {
-    const response = await fetch(`${API_BASE}/todos/reset`, {
-      method: 'POST',
-    });
-    if (!response.ok) throw new Error('Failed to reset todos');
-    return response.json();
   },
 
   // One-off todos
@@ -81,5 +73,12 @@ export const api = {
   async deleteOneOffTodo(id: number): Promise<void> {
     const response = await fetch(`${API_BASE}/oneoff-todos/${id}`, { method: 'DELETE' });
     if (!response.ok && response.status !== 204) throw new Error('Failed to delete one-off todo');
+  },
+
+  // Dependency graph
+  async getDependencyGraph(): Promise<DependencyGraph> {
+    const response = await fetch(`${API_BASE}/dependency-graph`);
+    if (!response.ok) throw new Error('Failed to fetch dependency graph');
+    return response.json();
   },
 };

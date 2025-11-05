@@ -1,7 +1,6 @@
 import os
 from typing import List, Optional
 
-from pydantic.v1.config import get_config
 import yaml
 from pydantic import BaseModel, Field, HttpUrl, ValidationError
 
@@ -12,6 +11,7 @@ class TodoConfig(BaseModel):
     depends_on_todos: List[str] = Field(default_factory=list)
     depends_on_categories: List[str] = Field(default_factory=list)
     depends_on_all_oneoffs: bool = False
+    reset_interval: int = 1  # Reset every N days (1 = daily)
 
 
 class CategoryConfig(BaseModel):

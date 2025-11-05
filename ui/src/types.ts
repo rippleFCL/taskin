@@ -28,3 +28,32 @@ export interface OneOffTodo {
   description: string | null;
   status: TaskStatus;
 }
+
+// Dependency Graph types (from API)
+export interface DependencyNode {
+  id: number;
+  title: string;
+  category: string;
+  status: TaskStatus;
+  reset_interval: number;
+}
+
+export type DependencyType = 'todo' | 'category' | 'all_oneoffs';
+
+export interface DependencyEdge {
+  from_todo_id: number;
+  from_todo_title: string;
+  to_todo_id?: number | null;
+  to_todo_title?: string | null;
+  to_category_id?: number | null;
+  to_category_name?: string | null;
+  depends_on_all_oneoffs?: boolean;
+  dependency_type: DependencyType;
+}
+
+export interface DependencyGraph {
+  nodes: DependencyNode[];
+  edges: DependencyEdge[];
+  categories: Category[];
+  oneoff_count: number;
+}

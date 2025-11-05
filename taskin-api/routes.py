@@ -8,11 +8,15 @@ from urllib import request as urlrequest
 from urllib.error import URLError, HTTPError
 from schemas import (
     CategoryWithTodos,
+    CategoryResponse,
     TodoResponse,
     TodoWithCategory,
     OneOffTodoResponse,
     OneOffTodoCreate,
     OneOffTodoUpdate,
+    DependencyGraph,
+    DependencyNode,
+    DependencyEdge,
 )
 from config_loader import UI_URI, WEBHOOK_URL
 
@@ -67,7 +71,11 @@ def update_todo_status(todo_id: int, status: TaskStatus, db: Session = Depends(g
     if not db_todo:
         raise HTTPException(status_code=404, detail="Todo not found")
 
-    setattr(db_todo, "status", status)
+    # If moving from complete to incomplete, reset the counter
+    if db_todo.status == TaskStatus.complete and status == TaskStatus.incomplete:
+        db_todo.reset_count = 0
+
+    db_todo.status = status
     db.commit()
     db.refresh(db_todo)
     return db_todo
@@ -128,7 +136,7 @@ def get_recommended_todos(db: Session = Depends(get_db)):
                 if not all_satisfied:
                     break
 
-            elif getattr(dep, "depends_on_all_oneoffs", 0) == 1:
+            elif dep.depends_on_all_oneoffs == 1:
                 # Check if ALL one-off todos are complete
                 oneoffs = db.query(OneOffTodo).all()
                 if not oneoffs:
@@ -150,16 +158,43 @@ def get_recommended_todos(db: Session = Depends(get_db)):
 
 @router.post("/todos/reset")
 def reset_all_todos(db: Session = Depends(get_db)):
-    """Reset all todos to incomplete status"""
+    """
+    Reset todos to incomplete status based on their reset_interval.
+    Increments reset_count for all todos, and resets status when count % interval == 0.
+
+    Example:
+    - reset_interval=1: resets every time (daily)
+    - reset_interval=5: resets every 5 calls (every 5 days)
+    """
     todos = db.query(Todo).all()
-    count = 0
+    reset_count = 0
+    skipped_count = 0
 
     for todo in todos:
-        todo.status = TaskStatus.incomplete  # type: ignore
-        count += 1
+        # Get current values
+        current_count = todo.reset_count + 1
+        interval = todo.reset_interval
+
+        # Increment the reset counter
+        todo.reset_count = current_count  # type: ignore
+
+        # Check if it's time to reset this todo
+        if current_count % interval == 0:
+            # Time to reset this todo
+            todo.status = TaskStatus.incomplete
+            # Reset the counter after resetting status
+            todo.reset_count = 0
+            reset_count += 1
+        else:
+            skipped_count += 1
 
     db.commit()
-    return {"message": f"Reset {count} todo(s) to incomplete status", "count": count}
+    return {
+        "message": f"Reset {reset_count} todo(s) to incomplete status, {skipped_count} skipped based on interval",
+        "reset": reset_count,
+        "skipped": skipped_count,
+        "total": len(todos),
+    }
 
 
 # One-off todo endpoints
@@ -218,11 +253,11 @@ def update_oneoff_todo(oneoff_id: int, payload: OneOffTodoUpdate, db: Session = 
         raise HTTPException(status_code=404, detail="One-off todo not found")
 
     if payload.title is not None:
-        setattr(item, "title", payload.title)
+        item.title = payload.title
     if payload.description is not None:
-        setattr(item, "description", payload.description)
+        item.description = payload.description
     if payload.status is not None:
-        setattr(item, "status", payload.status)
+        item.status = payload.status
     db.commit()
     db.refresh(item)
     return item
@@ -245,7 +280,94 @@ def update_oneoff_status(oneoff_id: int, status: TaskStatus, db: Session = Depen
     item = db.query(OneOffTodo).filter(OneOffTodo.id == oneoff_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="One-off todo not found")
-    setattr(item, "status", status)
+    item.status = status
     db.commit()
     db.refresh(item)
     return item
+
+
+@router.get("/dependency-graph", response_model=DependencyGraph)
+def get_dependency_graph(db: Session = Depends(get_db)):
+    """
+    Get the complete dependency graph showing relationships between all todos.
+    Returns nodes (todos with their details) and edges (dependency relationships).
+    """
+    # Get all todos and categories
+    todos = db.query(Todo).all()
+    categories = db.query(Category).all()
+    oneoff_count = db.query(OneOffTodo).count()
+
+    # Build category lookup
+    category_map = {cat.id: cat.name for cat in categories}
+
+    # Build nodes (all todos)
+    nodes = []
+    for todo in todos:
+        nodes.append(
+            DependencyNode(
+                id=todo.id,
+                title=todo.title,
+                category=category_map.get(todo.category_id, "Unknown"),
+                status=todo.status,
+                reset_interval=todo.reset_interval,
+            )
+        )
+
+    # Build edges (dependencies)
+    edges = []
+    dependencies = db.query(TodoDependency).all()
+
+    # Create todo lookup for resolving titles
+    todo_map = {t.id: t for t in todos}
+
+    for dep in dependencies:
+        from_todo = todo_map.get(dep.todo_id)
+        if not from_todo:
+            continue
+
+        if dep.depends_on_todo_id is not None:
+            # Dependency on another todo
+            to_todo = todo_map.get(dep.depends_on_todo_id)
+            if to_todo:
+                edges.append(
+                    DependencyEdge(
+                        from_todo_id=from_todo.id,
+                        from_todo_title=from_todo.title,
+                        to_todo_id=to_todo.id,
+                        to_todo_title=to_todo.title,
+                        dependency_type="todo",
+                    )
+                )
+
+        elif dep.depends_on_category_id is not None:
+            # Dependency on a category: expand to individual todo dependencies
+            # (the dependent todo requires all todos in the target category to be complete)
+            category_todos = [t for t in todos if t.category_id == dep.depends_on_category_id]
+            for target_todo in category_todos:
+                edges.append(
+                    DependencyEdge(
+                        from_todo_id=from_todo.id,
+                        from_todo_title=from_todo.title,
+                        to_todo_id=target_todo.id,
+                        to_todo_title=target_todo.title,
+                        dependency_type="todo",
+                    )
+                )
+
+        elif dep.depends_on_all_oneoffs == 1:
+            # Dependency on all one-off todos being complete
+            edges.append(
+                DependencyEdge(
+                    from_todo_id=from_todo.id,
+                    from_todo_title=from_todo.title,
+                    depends_on_all_oneoffs=True,
+                    dependency_type="all_oneoffs",
+                )
+            )
+
+    return DependencyGraph(
+        nodes=nodes,
+        edges=edges,
+        categories=[CategoryResponse(id=c.id, name=c.name, description=c.description) for c in categories],
+        oneoff_count=oneoff_count,
+    )

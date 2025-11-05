@@ -1,10 +1,23 @@
+from __future__ import annotations
 import os
-from sqlalchemy import create_engine, Column, Integer, String, Enum as SQLEnum, ForeignKey
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship
-import enum
 
-Base = declarative_base()
+import enum
+from typing import List, Optional
+
+from sqlalchemy import Enum as SAEnum, ForeignKey, String, create_engine, Integer
+from sqlalchemy.orm import (
+    DeclarativeBase,
+    Mapped,
+    mapped_column,
+    relationship,
+    sessionmaker,
+)
+
+
+class Base(DeclarativeBase):
+    pass
+
+
 environment = os.environ.get("ENV", "prod").lower()
 
 
@@ -21,12 +34,12 @@ class Category(Base):
 
     __tablename__ = "categories"
 
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, unique=True, nullable=False, index=True)
-    description = Column(String, nullable=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    name: Mapped[str] = mapped_column(String, unique=True, nullable=False, index=True)
+    description: Mapped[Optional[str]] = mapped_column(String, nullable=True)
 
     # Relationship to todos
-    todos = relationship("Todo", back_populates="category", cascade="all, delete-orphan")
+    todos: Mapped[List["Todo"]] = relationship(back_populates="category", cascade="all, delete-orphan")
 
 
 class Todo(Base):
@@ -34,14 +47,16 @@ class Todo(Base):
 
     __tablename__ = "todos"
 
-    id = Column(Integer, primary_key=True, index=True)
-    title = Column(String, nullable=False)
-    description = Column(String, nullable=True)
-    status = Column(SQLEnum(TaskStatus), default=TaskStatus.incomplete, nullable=False)
-    category_id = Column(Integer, ForeignKey("categories.id"), nullable=False)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    status: Mapped[TaskStatus] = mapped_column(SAEnum(TaskStatus), default=TaskStatus.incomplete, nullable=False)
+    category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"), nullable=False)
+    reset_interval: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    reset_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     # Relationship to category
-    category = relationship("Category", back_populates="todos")
+    category: Mapped["Category"] = relationship(back_populates="todos")
 
 
 class TodoDependency(Base):
@@ -49,13 +64,15 @@ class TodoDependency(Base):
 
     __tablename__ = "todo_dependencies"
 
-    id = Column(Integer, primary_key=True, index=True)
-    todo_id = Column(Integer, ForeignKey("todos.id", ondelete="CASCADE"), nullable=False)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    todo_id: Mapped[int] = mapped_column(ForeignKey("todos.id", ondelete="CASCADE"), nullable=False)
 
     # Either depends on a specific todo, a whole category, or all one-offs being complete
-    depends_on_todo_id = Column(Integer, ForeignKey("todos.id", ondelete="CASCADE"), nullable=True)
-    depends_on_category_id = Column(Integer, ForeignKey("categories.id", ondelete="CASCADE"), nullable=True)
-    depends_on_all_oneoffs = Column(Integer, default=0, nullable=False)  # 1=true, 0=false
+    depends_on_todo_id: Mapped[Optional[int]] = mapped_column(ForeignKey("todos.id", ondelete="CASCADE"), nullable=True)
+    depends_on_category_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("categories.id", ondelete="CASCADE"), nullable=True
+    )
+    depends_on_all_oneoffs: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
 
 class OneOffTodo(Base):
@@ -66,10 +83,10 @@ class OneOffTodo(Base):
 
     __tablename__ = "oneoff_todos"
 
-    id = Column(Integer, primary_key=True, index=True)
-    title = Column(String, nullable=False)
-    description = Column(String, nullable=True)
-    status = Column(SQLEnum(TaskStatus), default=TaskStatus.incomplete, nullable=False)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    status: Mapped[TaskStatus] = mapped_column(SAEnum(TaskStatus), default=TaskStatus.incomplete, nullable=False)
 
 
 # Database setup

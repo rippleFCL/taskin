@@ -3,11 +3,12 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { CategoryWithTodos, TodoWithCategory, TaskStatus, OneOffTodo } from './types';
 import { api } from './api';
 import { CategoryCard } from './components/CategoryCard';
-import { RefreshCw, RotateCcw, ListTodo, Sparkles, Check, Circle, CircleDashed, Moon, Sun, Plus, Trash, Pencil, X, Menu } from 'lucide-react';
+import { RefreshCw, RotateCcw, ListTodo, Sparkles, Check, Circle, CircleDashed, Moon, Sun, Plus, Trash, Pencil, X, Menu, Network } from 'lucide-react';
 import { Collapsible, CollapsibleContent } from './components/ui/collapsible';
 import { NavigationMenu, NavigationMenuItem, NavigationMenuList } from './components/ui/navigation-menu';
 import { Button } from './components/ui/button';
 import './App.css';
+import MermaidGraphView from './components/MermaidGraphView';
 
 function App() {
     const [categories, setCategories] = useState<CategoryWithTodos[]>([]);
@@ -21,11 +22,13 @@ function App() {
     const location = useLocation();
     const navigate = useNavigate();
     const path = location.pathname;
-    const currentTab: 'all' | 'recommended' | 'oneoff' = path.startsWith('/all')
+    const currentTab: 'all' | 'recommended' | 'oneoff' | 'graph' = path.startsWith('/all')
         ? 'all'
         : path.startsWith('/oneoff')
             ? 'oneoff'
-            : 'recommended';
+            : path.startsWith('/graph')
+                ? 'graph'
+                : 'recommended';
     const [error, setError] = useState<string | null>(null);
     const [pendingQueue, setPendingQueue] = useState<Array<{ id: number; status: TaskStatus }>>([]);
     const [oneOffs, setOneOffs] = useState<OneOffTodo[]>([]);
@@ -186,7 +189,7 @@ function App() {
     useEffect(() => {
         if (location.pathname === '/') {
             const last = localStorage.getItem('taskin_last_tab');
-            const target = last === 'all' || last === 'oneoff' || last === 'recommended' ? last : 'recommended';
+            const target = (last === 'all' || last === 'oneoff' || last === 'recommended' || last === 'graph') ? last : 'recommended';
             navigate(`/${target}`, { replace: true });
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -479,6 +482,22 @@ function App() {
         return () => { cancelled = true; clearInterval(id); };
     }, [pendingQueue.length, oneOffPending.length, checkServerHealth, processPending]);
 
+    // Background refresh: poll the API every 30s without blocking UI
+    useEffect(() => {
+        let cancelled = false;
+        const poll = async () => {
+            // Only refresh when online and server reachable
+            if (navigator.onLine && serverOnline && !cancelled) {
+                // Lightweight refresh; do not set loading spinner
+                loadData(false);
+            }
+        };
+        // Initial slight delay to avoid clashing with first load
+        const first = setTimeout(poll, 5000);
+        const interval = setInterval(poll, 30000);
+        return () => { cancelled = true; clearTimeout(first); clearInterval(interval); };
+    }, [serverOnline]);
+
     const handleStatusChange = async (id: number, status: TaskStatus) => {
         // Optimistic update locally
         applyLocalStatus(id, status);
@@ -530,6 +549,11 @@ function App() {
             </div>
         );
     }
+
+    // Choose main layout: full-height/width for Graph, constrained for others
+    const mainClasses = currentTab === 'graph'
+        ? 'flex-1 w-screen px-0 py-0 overflow-hidden'
+        : 'flex-1 container mx-auto px-4 py-6 max-w-4xl overflow-y-auto no-scrollbar';
 
     return (
         <div className="flex flex-col bg-muted/30" style={{ height: '100svh', overflow: 'hidden' }}>
@@ -587,6 +611,13 @@ function App() {
                                     <span>One-offs</span>
                                     <span> ({oneOffs.length})</span>
                                 </button>
+                                <button
+                                    onClick={() => { navigate('/graph'); setNavOpen(false); }}
+                                    className={`w-full justify-center flex items-center gap-2 px-3 py-3 rounded-md border transition-colors ${currentTab === 'graph' ? 'border-primary text-primary' : 'text-foreground hover:bg-accent'} `}
+                                >
+                                    <Network className="w-4 h-4" />
+                                    <span>Graph</span>
+                                </button>
                             </div>
                         </CollapsibleContent>
                     </Collapsible>
@@ -622,6 +653,15 @@ function App() {
                                         One-offs ({oneOffs.length})
                                     </button>
                                 </NavigationMenuItem>
+                                <NavigationMenuItem>
+                                    <button
+                                        onClick={() => navigate('/graph')}
+                                        className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-md ${currentTab === 'graph' ? 'bg-accent text-accent-foreground' : 'hover:bg-accent hover:text-accent-foreground'}`}
+                                    >
+                                        <Network className="w-4 h-4" />
+                                        Graph
+                                    </button>
+                                </NavigationMenuItem>
                             </NavigationMenuList>
                         </NavigationMenu>
                         <button
@@ -642,8 +682,8 @@ function App() {
             </nav>
 
             <main
-                className="flex-1 container mx-auto px-4 py-6 max-w-4xl overflow-y-auto no-scrollbar"
-                style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', paddingBottom: `${footerHeight}px` }}
+                className={mainClasses}
+                style={currentTab === 'graph' ? {} : { WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', paddingBottom: `${footerHeight}px` }}
             >
                 {currentTab === 'all' ? (
                     <>
@@ -728,6 +768,8 @@ function App() {
                             </div>
                         )}
                     </div>
+                ) : currentTab === 'graph' ? (
+                    <MermaidGraphView />
                 ) : (
                     <div className="bg-background rounded-lg border shadow-sm p-6">
                         <div className="mb-4 grid gap-2 sm:grid-cols-[1fr_auto]">

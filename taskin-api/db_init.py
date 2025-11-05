@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from models import Category, Todo, TodoDependency, TaskStatus, init_db, SessionLocal
-from config_loader import CONFIG, AppConfig
+from config_loader import CONFIG, AppConfig, CategoryConfig, TodoConfig
 
 
 def sync_db_from_config(db: Session, config_path: str = "config.yml"):
@@ -16,8 +16,8 @@ def sync_db_from_config(db: Session, config_path: str = "config.yml"):
         raise ValueError("CONFIG not initialized")
 
     # Build a map of config data for efficient lookup
-    config_categories = {}
-    config_todos = {}  # key: (category_name, todo_title)
+    config_categories: dict[str, CategoryConfig] = {}
+    config_todos: dict[tuple[str, str], TodoConfig] = {}  # key: (category_name, todo_title)
 
     for category_data in config.categories:
         category_name = category_data.name
@@ -29,7 +29,7 @@ def sync_db_from_config(db: Session, config_path: str = "config.yml"):
 
     # Get existing data from database
     existing_categories = {cat.name: cat for cat in db.query(Category).all()}
-    existing_todos = {}  # key: (category_name, todo_title) -> todo object
+    existing_todos: dict[tuple[str, str], Todo] = {}  # key: (category_name, todo_title) -> todo object
 
     for todo in db.query(Todo).all():
         category = db.query(Category).filter(Category.id == todo.category_id).first()
@@ -58,11 +58,12 @@ def sync_db_from_config(db: Session, config_path: str = "config.yml"):
         category = category_map[category_name]
 
         if key in existing_todos:
-            # Update existing todo (preserve status!)
+            # Update existing todo (preserve status and reset_count!)
             todo = existing_todos[key]
-            todo.description = todo_data.description  # type: ignore
+            todo.description = todo_data.description
             todo.category_id = category.id
-            # Status is preserved from database
+            todo.reset_interval = todo_data.reset_interval 
+            # Status and reset_count are preserved from database
         else:
             # Create new todo with default status (incomplete)
             todo = Todo(
@@ -70,6 +71,8 @@ def sync_db_from_config(db: Session, config_path: str = "config.yml"):
                 description=todo_data.description,
                 status=TaskStatus.incomplete,  # Always default to incomplete
                 category_id=category.id,
+                reset_interval=todo_data.reset_interval,
+                reset_count=0,
             )
             db.add(todo)
 
