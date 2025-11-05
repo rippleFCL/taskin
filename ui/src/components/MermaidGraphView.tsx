@@ -64,8 +64,8 @@ export default function MermaidGraphView() {
             const label = esc(n.title);
 
             if (n.node_type === 'category') {
-                // Use double circle for category nodes
-                lines.push(`${nid}(("${label}"))`);
+                // Smaller rounded-rectangle for category nodes (keep green color)
+                lines.push(`${nid}(\"${n.title}\")`);
                 categoryNodeIds.push(nid);
             } else if (n.node_type === 'special') {
                 // Use subroutine shape for special nodes

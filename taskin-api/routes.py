@@ -337,7 +337,7 @@ def get_dependency_graph(db: Session = Depends(get_db)):
         nodes.append(
             DependencyNode(
                 id=node_id,
-                title=f"Category: {category_name}",
+                title=category_name,
                 node_type="category",
             )
         )
@@ -400,7 +400,7 @@ def get_dependency_graph(db: Session = Depends(get_db)):
                         from_todo_id=from_todo.id,
                         from_todo_title=from_todo.title,
                         to_todo_id=category_node_id,
-                        to_todo_title=f"Category: {category_name}",
+                        to_todo_title=category_name,
                         dependency_type="category",
                     )
                 )
@@ -425,7 +425,7 @@ def get_dependency_graph(db: Session = Depends(get_db)):
                 nodes.append(
                     DependencyNode(
                         id=node_id,
-                        title=f"Category: {category_name}",
+                        title=category_name,
                         node_type="category",
                     )
                 )
@@ -457,7 +457,7 @@ def get_dependency_graph(db: Session = Depends(get_db)):
                 edges.append(
                     DependencyEdge(
                         from_todo_id=category_node_id,
-                        from_todo_title=f"Category: {category_name}",
+                        from_todo_title=category_name,
                         to_todo_id=target_todo.id,
                         to_todo_title=target_todo.title,
                         dependency_type="category_member",
