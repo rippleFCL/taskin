@@ -66,13 +66,14 @@ class OneOffTodoResponse(ORMModel):
 
 # Dependency graph schemas
 class DependencyNode(BaseModel):
-    """A node in the dependency graph representing a todo"""
+    """A node in the dependency graph representing a todo or category"""
 
     id: int
     title: str
-    category: str
-    status: TaskStatus
-    reset_interval: int
+    category: Optional[str] = None  # Only for todo nodes
+    status: Optional[TaskStatus] = None  # Only for todo nodes
+    reset_interval: Optional[int] = None  # Only for todo nodes
+    node_type: str = "todo"  # "todo" or "category"
 
 
 class DependencyEdge(BaseModel):

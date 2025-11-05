@@ -33,12 +33,13 @@ export interface OneOffTodo {
 export interface DependencyNode {
   id: number;
   title: string;
-  category: string;
-  status: TaskStatus;
-  reset_interval: number;
+  category?: string | null;
+  status?: TaskStatus | null;
+  reset_interval?: number | null;
+  node_type: 'todo' | 'category' | 'special';
 }
 
-export type DependencyType = 'todo' | 'category' | 'all_oneoffs';
+export type DependencyType = 'todo' | 'category' | 'category_member' | 'all_oneoffs' | 'special';
 
 export interface DependencyEdge {
   from_todo_id: number;

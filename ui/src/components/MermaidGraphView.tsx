@@ -53,11 +53,29 @@ export default function MermaidGraphView() {
         const lines: string[] = [];
         lines.push('flowchart TD'); // Top -> Down layout
 
-        // Define nodes (todos)
+        // Track node IDs for styling by type
+        const categoryNodeIds: string[] = [];
+        const wakeupNodeIds: string[] = [];
+        const sleepNodeIds: string[] = [];
+
+        // Define nodes (todos, categories, specials)
         for (const n of graph.nodes) {
             const nid = nodeIdTodo(n.id);
             const label = esc(n.title);
-            lines.push(`${nid}["${label}"]`);
+
+            if (n.node_type === 'category') {
+                // Use double circle for category nodes
+                lines.push(`${nid}(("${label}"))`);
+                categoryNodeIds.push(nid);
+            } else if (n.node_type === 'special') {
+                // Use subroutine shape for special nodes
+                lines.push(`${nid}[["${label}"]]`);
+                if (/wakeup/i.test(n.title)) wakeupNodeIds.push(nid);
+                else if (/sleep/i.test(n.title)) sleepNodeIds.push(nid);
+            } else {
+                // Regular box for todo nodes
+                lines.push(`${nid}["${label}"]`);
+            }
         }
 
         // Optional special node for all one-offs
@@ -66,6 +84,22 @@ export default function MermaidGraphView() {
             // style distinct color
             lines.push('classDef oneoffs fill:#f59e0b,stroke:#111,color:#111');
             lines.push('class oneoffs_all oneoffs;');
+        }
+
+        // Style category nodes with distinct color
+        if (categoryNodeIds.length > 0) {
+            lines.push('classDef category fill:#10b981,stroke:#111,color:#111');
+            lines.push(`class ${categoryNodeIds.join(',')} category;`);
+        }
+
+        // Style special nodes
+        if (wakeupNodeIds.length > 0) {
+            lines.push('classDef wakeup fill:#60a5fa,stroke:#111,color:#111');
+            lines.push(`class ${wakeupNodeIds.join(',')} wakeup;`);
+        }
+        if (sleepNodeIds.length > 0) {
+            lines.push('classDef sleep fill:#64748b,stroke:#111,color:#fff');
+            lines.push(`class ${sleepNodeIds.join(',')} sleep;`);
         }
 
         // Edges: prerequisite --> dependent
