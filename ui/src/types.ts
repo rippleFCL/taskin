@@ -1,4 +1,4 @@
-export type TaskStatus = 'incomplete' | 'in-progress' | 'complete';
+export type TaskStatus = 'incomplete' | 'in-progress' | 'complete' | 'skipped';
 
 export interface Category {
   id: number;

@@ -27,6 +27,7 @@ class TaskStatus(enum.Enum):
     incomplete = "incomplete"
     in_progress = "in-progress"
     complete = "complete"
+    skipped = "skipped"  # Like complete but always resets next day
 
 
 class Category(Base):

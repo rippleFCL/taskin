@@ -184,7 +184,7 @@ def sync_dependencies(db: Session, config: AppConfig, config_todos: dict, catego
     print("Computing recursive dependencies...")
     computed_deps = {}  # todo_id -> set of all dependency todo_ids
 
-    def get_all_dependencies(todo_id: int, visited: set = None) -> set:
+    def get_all_dependencies(todo_id: int, visited: set | None = None) -> set:
         """Recursively get all dependencies for a todo."""
         if visited is None:
             visited = set()

@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { CategoryWithTodos, TodoWithCategory, TaskStatus, OneOffTodo } from './types';
 import { api } from './api';
 import { CategoryCard } from './components/CategoryCard';
-import { RefreshCw, RotateCcw, ListTodo, Sparkles, Check, Circle, CircleDashed, Moon, Sun, Plus, Trash, Pencil, X, Menu, Network } from 'lucide-react';
+import { RefreshCw, RotateCcw, ListTodo, Sparkles, Check, Circle, CircleDashed, Moon, Sun, Plus, Trash, Pencil, X, Menu, Network, SkipForward } from 'lucide-react';
 import { Collapsible, CollapsibleContent } from './components/ui/collapsible';
 import { NavigationMenu, NavigationMenuItem, NavigationMenuList } from './components/ui/navigation-menu';
 import { Button } from './components/ui/button';
@@ -59,11 +59,12 @@ function App() {
     const allTodos = useMemo(() => categories.flatMap(c => c.todos), [categories]);
     const summary = useMemo(() => {
         const total = allTodos.length;
-        let incomplete = 0, inProgress = 0, complete = 0;
+        let incomplete = 0, inProgress = 0, complete = 0, skipped = 0;
         for (const t of allTodos) {
             if (t.status === 'incomplete') incomplete++;
             else if (t.status === 'in-progress') inProgress++;
             else if (t.status === 'complete') complete++;
+            else if (t.status === 'skipped') skipped++;
         }
         const percentComplete = total > 0 ? Math.round((complete / total) * 100) : 0;
         return {
@@ -72,17 +73,19 @@ function App() {
             incomplete,
             inProgress,
             complete,
+            skipped,
             percentComplete,
             readyNow: recommendedTodos.length,
         };
     }, [allTodos, categories.length, recommendedTodos.length]);
 
-    // One-offs sorted: in-progress first, then incomplete, then complete; stable within groups
+    // One-offs sorted: in-progress first, then incomplete, then complete, then skipped; stable within groups
     const sortedOneOffs = useMemo(() => {
         const inProgress = oneOffs.filter(o => o.status === 'in-progress');
         const incomplete = oneOffs.filter(o => o.status === 'incomplete');
         const complete = oneOffs.filter(o => o.status === 'complete');
-        return [...inProgress, ...incomplete, ...complete];
+        const skipped = oneOffs.filter(o => o.status === 'skipped');
+        return [...inProgress, ...incomplete, ...complete, ...skipped];
     }, [oneOffs]);
 
     const applyTheme = useCallback((t: 'light' | 'dark') => {
@@ -746,9 +749,10 @@ function App() {
                                             <div className="font-medium">{summary.incomplete}</div>
                                         </div>
                                         <div className="rounded-md border p-3 bg-muted/40">
-                                            <div className="text-muted-foreground text-xs">Categories</div>
-                                            <div className="font-medium">{summary.categories}</div>
+                                            <div className="flex items-center gap-1 text-xs text-muted-foreground"><SkipForward className="w-3 h-3" /> Skipped</div>
+                                            <div className="font-medium">{summary.skipped}</div>
                                         </div>
+
                                     </div>
                                 </CardContent>
                             </Card>
@@ -783,7 +787,7 @@ function App() {
                         ) : (
                             <div className="space-y-3">
                                 {recommendedTodos.map(todo => {
-                                    const statuses: ('incomplete' | 'in-progress' | 'complete')[] = ['incomplete', 'in-progress', 'complete'];
+                                    const statuses: ('incomplete' | 'in-progress' | 'complete' | 'skipped')[] = ['incomplete', 'in-progress', 'complete', 'skipped'];
                                     return (
                                         <div
                                             key={todo.id}
@@ -795,10 +799,10 @@ function App() {
                                                 </span>
                                                 <h4 className="font-medium flex-1 flex items-center gap-2">
                                                     {todo.title}
-                                                    <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-md bg-background/40 text-muted-foreground">{todo.status === 'in-progress' ? 'In Progress' : todo.status === 'complete' ? 'Complete' : 'Incomplete'}</span>
+                                                    <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-md bg-background/40 text-muted-foreground">{todo.status === 'in-progress' ? 'In Progress' : todo.status === 'complete' ? 'Complete' : todo.status === 'skipped' ? 'Skipped' : 'Incomplete'}</span>
                                                 </h4>
                                                 <div className="ml-2 mt-1">
-                                                    <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: todo.status === 'complete' ? '#22c55e' : todo.status === 'in-progress' ? '#3b82f6' : '#64748b' }} title={todo.status} />
+                                                    <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: todo.status === 'complete' ? '#22c55e' : todo.status === 'in-progress' ? '#3b82f6' : todo.status === 'skipped' ? '#f97316' : '#64748b' }} title={todo.status} />
                                                 </div>
                                             </div>
                                             {todo.description && (
@@ -818,8 +822,13 @@ function App() {
                                                             <Button key={s} size="sm" variant={s === todo.status ? 'default' : 'outline'} onClick={() => handleStatusChange(todo.id, 'in-progress')} aria-label="Mark as in progress"><CircleDashed className="w-4 h-4 sm:mr-2 shrink-0" /><span className="hidden sm:inline">In Progress</span></Button>
                                                         );
                                                     }
+                                                    if (s === 'complete') {
+                                                        return (
+                                                            <Button key={s} size="sm" variant={s === todo.status ? 'default' : 'outline'} onClick={() => handleStatusChange(todo.id, 'complete')} aria-label="Mark as complete"><Check className="w-4 h-4 sm:mr-2 shrink-0" /><span className="hidden sm:inline">Complete</span></Button>
+                                                        );
+                                                    }
                                                     return (
-                                                        <Button key={s} size="sm" variant={s === todo.status ? 'default' : 'outline'} onClick={() => handleStatusChange(todo.id, 'complete')} aria-label="Mark as complete"><Check className="w-4 h-4 sm:mr-2 shrink-0" /><span className="hidden sm:inline">Complete</span></Button>
+                                                        <Button key={s} size="sm" variant={s === todo.status ? 'default' : 'outline'} onClick={() => handleStatusChange(todo.id, 'skipped')} aria-label="Mark as skipped"><SkipForward className="w-4 h-4 sm:mr-2 shrink-0" /><span className="hidden sm:inline">Skip</span></Button>
                                                     );
                                                 })}
                                             </div>
@@ -1033,7 +1042,7 @@ function App() {
                                         </div>
                                         {/* Status buttons row below title/description */}
                                         <div className="mt-3 flex flex-wrap gap-2">
-                                            {(['incomplete', 'in-progress', 'complete'] as const).filter(s => s !== item.status).map(s => {
+                                            {(['incomplete', 'in-progress', 'complete', 'skipped'] as const).filter(s => s !== item.status).map(s => {
                                                 const disabled = editingId === item.id;
                                                 if (s === 'incomplete') return (
                                                     <Button key={s} size="sm" variant={s === item.status ? 'default' : 'outline'} onClick={async () => {
@@ -1073,7 +1082,7 @@ function App() {
                                                         }
                                                     }} disabled={disabled} aria-label="Mark as in progress"><CircleDashed className="w-4 h-4 sm:mr-2 shrink-0" /><span className="hidden sm:inline">In Progress</span></Button>
                                                 )
-                                                return (
+                                                if (s === 'complete') return (
                                                     <Button key={s} size="sm" variant={s === item.status ? 'default' : 'outline'} onClick={async () => {
                                                         // Optimistic update
                                                         setOneOffs(prev => {
@@ -1092,6 +1101,25 @@ function App() {
                                                         }
                                                     }} disabled={disabled} aria-label="Mark as complete"><Check className="w-4 h-4 sm:mr-2 shrink-0" /><span className="hidden sm:inline">Complete</span></Button>
                                                 )
+                                                return (
+                                                    <Button key={s} size="sm" variant={s === item.status ? 'default' : 'outline'} onClick={async () => {
+                                                        // Optimistic update
+                                                        setOneOffs(prev => {
+                                                            const list = prev.map(o => o.id === item.id ? { ...o, status: 'skipped' as TaskStatus } : o);
+                                                            try { localStorage.setItem(LS_ONEOFFS, JSON.stringify(list)); } catch { }
+                                                            return list;
+                                                        });
+                                                        const canSync = navigator.onLine && serverOnline;
+                                                        try {
+                                                            if (canSync) await api.updateOneOffStatus(item.id, 'skipped');
+                                                            else {
+                                                                setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'status' as const, id: item.id, status: 'skipped' as TaskStatus }]); saveOneOffPending(next); return next; });
+                                                            }
+                                                        } catch (e) {
+                                                            setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'status' as const, id: item.id, status: 'skipped' as TaskStatus }]); saveOneOffPending(next); return next; });
+                                                        }
+                                                    }} disabled={disabled} aria-label="Mark as skipped"><SkipForward className="w-4 h-4 sm:mr-2 shrink-0" /><span className="hidden sm:inline">Skip</span></Button>
+                                                );
                                             })}
                                         </div>
                                     </div>

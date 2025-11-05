@@ -86,8 +86,8 @@ def get_recommended_todos(db: Session = Depends(get_db)):
     """
     Get todos that are ready to work on (all dependencies satisfied).
     A todo is recommended if:
-    - It's not already complete
-    - All of its computed dependencies (from TodoDependencyComputed) are complete
+    - It's not already complete or skipped
+    - All of its computed dependencies (from TodoDependencyComputed) are complete or skipped
 
     This uses the fully expanded dependency table which includes:
     - All explicit dependencies
@@ -95,8 +95,8 @@ def get_recommended_todos(db: Session = Depends(get_db)):
     - Recursive walk up the dependency tree
     - Expanded category dependencies
     """
-    # Get all incomplete todos
-    incomplete_todos = db.query(Todo).filter(Todo.status != TaskStatus.complete).all()
+    # Get all incomplete and in-progress todos (exclude complete and skipped)
+    incomplete_todos = db.query(Todo).filter(Todo.status.in_([TaskStatus.incomplete, TaskStatus.in_progress])).all()
 
     recommended = []
 
@@ -109,13 +109,13 @@ def get_recommended_todos(db: Session = Depends(get_db)):
             recommended.append(todo)
             continue
 
-        # Check if all dependencies are satisfied
+        # Check if all dependencies are satisfied (complete or skipped)
         all_satisfied = True
 
         for dep in dependencies:
             # All computed dependencies are todo->todo
             dep_todo = db.query(Todo).filter(Todo.id == dep.depends_on_todo_id).first()
-            if not dep_todo or dep_todo.status != TaskStatus.complete:  # type: ignore
+            if not dep_todo or dep_todo.status not in [TaskStatus.complete, TaskStatus.skipped]:  # type: ignore
                 all_satisfied = False
                 break
 
@@ -129,19 +129,27 @@ def get_recommended_todos(db: Session = Depends(get_db)):
 def reset_all_todos(db: Session = Depends(get_db)):
     """
     Reset todos to incomplete status based on their reset_interval.
-    Increments reset_count for all todos, and resets status when count % interval == 0.
+    - Skipped todos ALWAYS reset (reset_interval ignored)
+    - Complete todos increment reset_count and reset when count % interval == 0
 
     Example:
     - reset_interval=1: resets every time (daily)
     - reset_interval=5: resets every 5 calls (every 5 days)
+    - skipped status: always resets regardless of interval
     """
     todos = db.query(Todo).all()
     reset_count = 0
-    skipped_count = 0
+    skipped_reset_count = 0
+    interval_skipped_count = 0
 
     for todo in todos:
-        # Get current values
-        if todo.status == TaskStatus.complete:
+        # Skipped todos ALWAYS reset to incomplete
+        if todo.status == TaskStatus.skipped:
+            todo.status = TaskStatus.incomplete
+            todo.reset_count = 0
+            skipped_reset_count += 1
+        # Complete todos reset based on interval
+        elif todo.status == TaskStatus.complete:
             current_count = todo.reset_count + 1
             interval = todo.reset_interval
 
@@ -156,13 +164,14 @@ def reset_all_todos(db: Session = Depends(get_db)):
                 todo.reset_count = 0
                 reset_count += 1
             else:
-                skipped_count += 1
+                interval_skipped_count += 1
 
     db.commit()
     return {
-        "message": f"Reset {reset_count} todo(s) to incomplete status, {skipped_count} skipped based on interval",
-        "reset": reset_count,
-        "skipped": skipped_count,
+        "message": f"Reset {reset_count} complete todo(s) and {skipped_reset_count} skipped todo(s), {interval_skipped_count} skipped based on interval",
+        "reset_complete": reset_count,
+        "reset_skipped": skipped_reset_count,
+        "interval_skipped": interval_skipped_count,
         "total": len(todos),
     }
 

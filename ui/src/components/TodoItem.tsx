@@ -1,6 +1,6 @@
 import { Todo, TaskStatus } from '../types';
 import { Button } from './ui/button';
-import { Check, Circle, CircleDashed } from 'lucide-react';
+import { Check, Circle, CircleDashed, SkipForward } from 'lucide-react';
 import { Badge } from './ui/badge';
 
 interface TodoItemProps {
@@ -20,6 +20,8 @@ export function TodoItem({ todo, onStatusChange }: TodoItemProps) {
                 return '#22c55e';
             case 'in-progress':
                 return '#3b82f6';
+            case 'skipped':
+                return '#f97316';
             case 'incomplete':
                 return '#64748b';
         }
@@ -31,12 +33,14 @@ export function TodoItem({ todo, onStatusChange }: TodoItemProps) {
                 return '✓ Complete';
             case 'in-progress':
                 return '◐ In Progress';
+            case 'skipped':
+                return '⏭ Skipped';
             case 'incomplete':
                 return '○ Incomplete';
         }
     };
 
-    const statuses: TaskStatus[] = ['incomplete', 'in-progress', 'complete'];
+    const statuses: TaskStatus[] = ['incomplete', 'in-progress', 'complete', 'skipped'];
 
     return (
         <div className="py-4">
@@ -84,15 +88,28 @@ export function TodoItem({ todo, onStatusChange }: TodoItemProps) {
                             </Button>
                         );
                     }
+                    if (s === 'complete') {
+                        return (
+                            <Button
+                                key={s}
+                                variant={s === todo.status ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => handleStatusChange('complete')}
+                                aria-label="Mark as complete"
+                            >
+                                <Check className="w-4 h-4 sm:mr-2 shrink-0" /> <span className="hidden sm:inline">Complete</span>
+                            </Button>
+                        );
+                    }
                     return (
                         <Button
                             key={s}
                             variant={s === todo.status ? 'default' : 'outline'}
                             size="sm"
-                            onClick={() => handleStatusChange('complete')}
-                            aria-label="Mark as complete"
+                            onClick={() => handleStatusChange('skipped')}
+                            aria-label="Mark as skipped"
                         >
-                            <Check className="w-4 h-4 sm:mr-2 shrink-0" /> <span className="hidden sm:inline">Complete</span>
+                            <SkipForward className="w-4 h-4 sm:mr-2 shrink-0" /> <span className="hidden sm:inline">Skip</span>
                         </Button>
                     );
                 })}
