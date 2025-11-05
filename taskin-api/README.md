@@ -8,6 +8,7 @@ A simple FastAPI-based todo API with categories and SQLite storage.
 - ✅ Todo CRUD operations
 - ✅ Status tracking (incomplete, in-progress, complete)
 - ✅ SQLite database
+- ✅ Database migrations with Alembic
 - ✅ Initial data loading from config.yml
 - ✅ RESTful API design
 
@@ -29,6 +30,16 @@ poetry install
 2. Activate the virtual environment:
 ```bash
 poetry shell
+```
+
+3. Run database migrations:
+```bash
+poetry run python migrate.py upgrade
+```
+
+Or using alembic directly:
+```bash
+ENV=dev poetry run alembic upgrade head
 ```
 
 ## Running the API
@@ -73,6 +84,68 @@ Once the server is running, visit:
 
 Edit `config.yml` to customize the initial todos loaded into the database. The database is populated on first run.
 
+## Database Migrations
+
+This project uses Alembic for database migrations.
+
+### Common Migration Commands
+
+#### Using the migration helper script:
+
+```bash
+# Apply all pending migrations
+poetry run python migrate.py upgrade
+
+# Create a new migration after changing models
+poetry run python migrate.py create "description_of_changes"
+
+# Show current database revision
+poetry run python migrate.py current
+
+# Show migration history
+poetry run python migrate.py history
+
+# Downgrade to a specific revision
+poetry run python migrate.py downgrade <revision_id>
+```
+
+#### Using Alembic directly:
+
+```bash
+# Apply all pending migrations
+ENV=dev poetry run alembic upgrade head
+
+# Create a new migration
+ENV=dev poetry run alembic revision --autogenerate -m "description_of_changes"
+
+# Show current revision
+ENV=dev poetry run alembic current
+
+# Show migration history
+ENV=dev poetry run alembic history
+
+# Downgrade one revision
+ENV=dev poetry run alembic downgrade -1
+
+# Downgrade to a specific revision
+ENV=dev poetry run alembic downgrade <revision_id>
+```
+
+### Creating Migrations
+
+When you modify the models in `models.py`, create a new migration:
+
+1. Make your changes to `models.py`
+2. Generate the migration:
+   ```bash
+   poetry run python migrate.py create "your_migration_description"
+   ```
+3. Review the generated migration file in `alembic/versions/`
+4. Apply the migration:
+   ```bash
+   poetry run python migrate.py upgrade
+   ```
+
 ### Status Values
 
 - `incomplete` - Task not started
@@ -112,9 +185,15 @@ curl "http://localhost:8000/api/todos?status=in-progress"
 
 ```
 taskin-api/
+├── alembic/            # Database migrations
+│   ├── versions/       # Migration scripts
+│   ├── env.py         # Alembic environment
+│   └── script.py.mako # Migration template
+├── alembic.ini         # Alembic configuration
 ├── config.yml          # Initial todos configuration
 ├── db_init.py          # Database initialization
 ├── main.py             # FastAPI application entry point
+├── migrate.py          # Migration helper script
 ├── models.py           # SQLAlchemy models
 ├── routes.py           # API routes/endpoints
 ├── schemas.py          # Pydantic schemas

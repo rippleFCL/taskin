@@ -1,6 +1,9 @@
 from sqlalchemy.orm import Session
-from models import Category, Todo, TodoDependency, TaskStatus, init_db, SessionLocal
+from models import Category, Todo, TodoDependency, TaskStatus, SessionLocal
 from config_loader import CONFIG, AppConfig, CategoryConfig, TodoConfig
+from alembic.config import Config
+from alembic import command
+import os
 
 
 def sync_db_from_config(db: Session, config_path: str = "config.yml"):
@@ -62,7 +65,7 @@ def sync_db_from_config(db: Session, config_path: str = "config.yml"):
             todo = existing_todos[key]
             todo.description = todo_data.description
             todo.category_id = category.id
-            todo.reset_interval = todo_data.reset_interval 
+            todo.reset_interval = todo_data.reset_interval
             # Status and reset_count are preserved from database
         else:
             # Create new todo with default status (incomplete)
@@ -162,8 +165,16 @@ def sync_dependencies(db: Session, config: AppConfig, config_todos: dict, catego
 
 def initialize_database():
     """Initialize database and sync with config data"""
-    # Create tables
-    init_db()
+    # Run migrations to create/update tables
+    alembic_cfg = Config("alembic.ini")
+    alembic_cfg.set_main_option("script_location", "alembic")
+
+    # Get current directory for proper path resolution
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    alembic_cfg.set_main_option("script_location", os.path.join(current_dir, "alembic"))
+
+    # Run migrations
+    command.upgrade(alembic_cfg, "head")
 
     # Sync with data from config
     db = SessionLocal()
