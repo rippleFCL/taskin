@@ -2,7 +2,7 @@ from urllib.parse import urljoin
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List
-from models import get_db, Category, Todo, TodoDependency, TaskStatus, OneOffTodo
+from models import get_db, Category, Todo, TodoDependency, TodoDependencyComputed, TaskStatus, OneOffTodo
 import json
 from urllib import request as urlrequest
 from urllib.error import URLError, HTTPError
@@ -87,8 +87,13 @@ def get_recommended_todos(db: Session = Depends(get_db)):
     Get todos that are ready to work on (all dependencies satisfied).
     A todo is recommended if:
     - It's not already complete
-    - All todo dependencies are complete
-    - All category dependencies have all their todos complete
+    - All of its computed dependencies (from TodoDependencyComputed) are complete
+
+    This uses the fully expanded dependency table which includes:
+    - All explicit dependencies
+    - All implicit position-based dependencies
+    - Recursive walk up the dependency tree
+    - Expanded category dependencies
     """
     # Get all incomplete todos
     incomplete_todos = db.query(Todo).filter(Todo.status != TaskStatus.complete).all()
@@ -96,8 +101,8 @@ def get_recommended_todos(db: Session = Depends(get_db)):
     recommended = []
 
     for todo in incomplete_todos:
-        # Get all dependencies for this todo
-        dependencies = db.query(TodoDependency).filter(TodoDependency.todo_id == todo.id).all()
+        # Get ALL computed dependencies for this todo
+        dependencies = db.query(TodoDependencyComputed).filter(TodoDependencyComputed.todo_id == todo.id).all()
 
         if not dependencies:
             # No dependencies means it's always recommended (if incomplete)
@@ -108,47 +113,11 @@ def get_recommended_todos(db: Session = Depends(get_db)):
         all_satisfied = True
 
         for dep in dependencies:
-            if dep.depends_on_todo_id is not None:
-                # Check if the dependent todo is complete
-                dep_todo = db.query(Todo).filter(Todo.id == dep.depends_on_todo_id).first()
-                if not dep_todo:
-                    all_satisfied = False
-                    break
-                # Type ignore for SQLAlchemy enum comparison
-                if dep_todo.status != TaskStatus.complete:  # type: ignore
-                    all_satisfied = False
-                    break
-
-            elif dep.depends_on_category_id is not None:
-                # Check if ALL todos in the dependent category are complete
-                category_todos = db.query(Todo).filter(Todo.category_id == dep.depends_on_category_id).all()
-
-                if not category_todos:
-                    all_satisfied = False
-                    break
-
-                # Check each todo in category
-                for t in category_todos:
-                    if t.status != TaskStatus.complete:  # type: ignore
-                        all_satisfied = False
-                        break
-
-                if not all_satisfied:
-                    break
-
-            elif dep.depends_on_all_oneoffs == 1:
-                # Check if ALL one-off todos are complete
-                oneoffs = db.query(OneOffTodo).all()
-                if not oneoffs:
-                    # No one-offs exist, dependency satisfied
-                    pass
-                else:
-                    for oneoff in oneoffs:
-                        if oneoff.status != TaskStatus.complete:  # type: ignore
-                            all_satisfied = False
-                            break
-                    if not all_satisfied:
-                        break
+            # All computed dependencies are todo->todo
+            dep_todo = db.query(Todo).filter(Todo.id == dep.depends_on_todo_id).first()
+            if not dep_todo or dep_todo.status != TaskStatus.complete:  # type: ignore
+                all_satisfied = False
+                break
 
         if all_satisfied:
             recommended.append(todo)
@@ -307,7 +276,6 @@ def get_dependency_graph(db: Session = Depends(get_db)):
     # Build nodes (todos + category nodes)
     nodes = []
 
-    # Add todo nodes
     for todo in todos:
         nodes.append(
             DependencyNode(
@@ -373,8 +341,8 @@ def get_dependency_graph(db: Session = Depends(get_db)):
         if not from_todo:
             continue
 
+        # Handle todo -> todo dependencies
         if dep.depends_on_todo_id is not None:
-            # Dependency on another todo
             to_todo = todo_map.get(dep.depends_on_todo_id)
             if to_todo:
                 edges.append(
@@ -387,6 +355,7 @@ def get_dependency_graph(db: Session = Depends(get_db)):
                     )
                 )
 
+        # Handle todo -> category dependencies
         elif dep.depends_on_category_id is not None:
             # Dependency on a category:
             # 1. Create edge from dependent todo to category node

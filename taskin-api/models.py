@@ -54,25 +54,53 @@ class Todo(Base):
     category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"), nullable=False)
     reset_interval: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     reset_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    position: Mapped[int] = mapped_column(Integer, default=0, nullable=False)  # Position within category for implicit deps
 
     # Relationship to category
     category: Mapped["Category"] = relationship(back_populates="todos")
 
 
 class TodoDependency(Base):
-    """Dependency relationships between todos, categories, and one-offs"""
+    """Explicit dependency relationships for visualization in the dependency graph.
+
+    Stores dependencies as defined in config:
+    - todo -> todo dependencies
+    - todo -> category dependencies (not expanded)
+    - todo -> all_oneoffs flag
+
+    This table is used ONLY for rendering the dependency graph.
+    """
 
     __tablename__ = "todo_dependencies"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     todo_id: Mapped[int] = mapped_column(ForeignKey("todos.id", ondelete="CASCADE"), nullable=False)
 
-    # Either depends on a specific todo, a whole category, or all one-offs being complete
+    # Explicit dependency types (only one should be set)
     depends_on_todo_id: Mapped[Optional[int]] = mapped_column(ForeignKey("todos.id", ondelete="CASCADE"), nullable=True)
     depends_on_category_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("categories.id", ondelete="CASCADE"), nullable=True
     )
     depends_on_all_oneoffs: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+
+class TodoDependencyComputed(Base):
+    """Fully computed/expanded dependencies for determining task readiness.
+
+    This table contains ALL dependencies (explicit + implicit + expanded):
+    - All explicit todo->todo dependencies
+    - All category dependencies expanded to individual todos
+    - All implicit dependencies (position-based within category)
+    - Recursive walk up the dependency tree
+
+    This table is used for the recommended todos logic.
+    """
+
+    __tablename__ = "todo_dependencies_computed"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    todo_id: Mapped[int] = mapped_column(ForeignKey("todos.id", ondelete="CASCADE"), nullable=False)
+    depends_on_todo_id: Mapped[int] = mapped_column(ForeignKey("todos.id", ondelete="CASCADE"), nullable=False)
 
 
 class OneOffTodo(Base):

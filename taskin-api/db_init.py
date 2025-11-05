@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from models import Category, Todo, TodoDependency, TaskStatus, SessionLocal
+from models import Category, Todo, TodoDependency, TodoDependencyComputed, TaskStatus, SessionLocal
 from config_loader import CONFIG, AppConfig, CategoryConfig, TodoConfig
 from alembic.config import Config
 from alembic import command
@@ -55,10 +55,15 @@ def sync_db_from_config(db: Session, config_path: str = "config.yml"):
             db.flush()
             category_map[category_name] = cat
 
-    # 2. Sync todos - add new, update existing
-    for (category_name, todo_title), todo_data in config_todos.items():
+    # 2. Sync todos - add new, update existing, and assign positions
+    for idx, ((category_name, todo_title), todo_data) in enumerate(config_todos.items()):
         key = (category_name, todo_title)
         category = category_map[category_name]
+
+        # Calculate position within this category
+        # Position is the index of this todo within its category's todos
+        category_todos_list = [t for t in config_todos.keys() if t[0] == category_name]
+        position = category_todos_list.index((category_name, todo_title))
 
         if key in existing_todos:
             # Update existing todo (preserve status and reset_count!)
@@ -66,6 +71,7 @@ def sync_db_from_config(db: Session, config_path: str = "config.yml"):
             todo.description = todo_data.description
             todo.category_id = category.id
             todo.reset_interval = todo_data.reset_interval
+            todo.position = position  # type: ignore
             # Status and reset_count are preserved from database
         else:
             # Create new todo with default status (incomplete)
@@ -76,6 +82,7 @@ def sync_db_from_config(db: Session, config_path: str = "config.yml"):
                 category_id=category.id,
                 reset_interval=todo_data.reset_interval,
                 reset_count=0,
+                position=position,
             )
             db.add(todo)
 
@@ -111,18 +118,36 @@ def sync_db_from_config(db: Session, config_path: str = "config.yml"):
 
 
 def sync_dependencies(db: Session, config: AppConfig, config_todos: dict, category_map: dict):
-    """Sync todo dependencies from config"""
+    """Sync todo dependencies from config.
+
+    Creates two types of dependency tables:
+    1. TodoDependency - Explicit dependencies as defined in config (for graph visualization)
+    2. TodoDependencyComputed - Fully expanded and recursive dependencies (for recommendations)
+    """
     # Clear existing dependencies
     db.query(TodoDependency).delete()
+    db.query(TodoDependencyComputed).delete()
 
-    # Build todo lookup map: title -> todo object
+    # Build todo lookup maps
     todo_map = {}  # (category_name, todo_title) -> todo object
-    for todo in db.query(Todo).all():
+    title_to_todo = {}  # title -> todo object (for cross-category lookup)
+    todos_by_category = {}  # category_name -> list of todos sorted by position
+
+    all_todos = db.query(Todo).order_by(Todo.category_id, Todo.position).all()
+
+    for todo in all_todos:
         category = db.query(Category).filter(Category.id == todo.category_id).first()
         if category:
-            todo_map[(category.name, todo.title)] = todo
+            key = (category.name, todo.title)
+            todo_map[key] = todo
+            title_to_todo[todo.title] = todo
 
-    # Create dependencies based on config
+            if category.name not in todos_by_category:
+                todos_by_category[category.name] = []
+            todos_by_category[category.name].append(todo)
+
+    # Step 1: Create explicit dependencies (for graph visualization)
+    print("Creating explicit dependencies...")
     for category_data in config.categories:
         category_name = category_data.name
 
@@ -135,32 +160,96 @@ def sync_dependencies(db: Session, config: AppConfig, config_todos: dict, catego
 
             todo = todo_map[key]
 
-            # Handle depends_on_todos
+            # Explicit todo dependencies
             for dep_todo_title in todo_data.depends_on_todos:
-                # Find the dependency todo (search across all categories)
-                dep_todo = None
-                for (cat_name, title), t in todo_map.items():
-                    if title == dep_todo_title:
-                        dep_todo = t
-                        break
-
+                dep_todo = title_to_todo.get(dep_todo_title)
                 if dep_todo:
                     dependency = TodoDependency(todo_id=todo.id, depends_on_todo_id=dep_todo.id)
                     db.add(dependency)
 
-            # Handle depends_on_categories
+            # Explicit category dependencies (NOT expanded here)
             for dep_category_name in todo_data.depends_on_categories:
                 if dep_category_name in category_map:
                     dependency = TodoDependency(todo_id=todo.id, depends_on_category_id=category_map[dep_category_name].id)
                     db.add(dependency)
 
-            # Handle depends_on_all_oneoffs
+            # Explicit all_oneoffs dependency
             if todo_data.depends_on_all_oneoffs:
                 dependency = TodoDependency(todo_id=todo.id, depends_on_all_oneoffs=1)
                 db.add(dependency)
 
     db.commit()
-    print("Dependencies synced")
+
+    # Step 2: Compute fully expanded dependencies recursively
+    print("Computing recursive dependencies...")
+    computed_deps = {}  # todo_id -> set of all dependency todo_ids
+
+    def get_all_dependencies(todo_id: int, visited: set = None) -> set:
+        """Recursively get all dependencies for a todo."""
+        if visited is None:
+            visited = set()
+
+        if todo_id in visited:
+            return set()  # Avoid cycles
+
+        visited.add(todo_id)
+
+        if todo_id in computed_deps:
+            return computed_deps[todo_id]
+
+        all_deps = set()
+
+        # Get explicit dependencies from TodoDependency
+        explicit_deps = db.query(TodoDependency).filter(TodoDependency.todo_id == todo_id).all()
+
+        for dep in explicit_deps:
+            # Handle todo dependencies
+            if dep.depends_on_todo_id is not None:
+                all_deps.add(dep.depends_on_todo_id)
+                # Recursively add dependencies of this dependency
+                recursive_deps = get_all_dependencies(dep.depends_on_todo_id, visited.copy())
+                all_deps.update(recursive_deps)
+
+            # Handle category dependencies - expand to all todos in category
+            elif dep.depends_on_category_id is not None:
+                category = db.query(Category).filter(Category.id == dep.depends_on_category_id).first()
+                if category and category.name in todos_by_category:
+                    for cat_todo in todos_by_category[category.name]:
+                        all_deps.add(cat_todo.id)
+                        # Recursively add dependencies of each todo in the category
+                        recursive_deps = get_all_dependencies(cat_todo.id, visited.copy())
+                        all_deps.update(recursive_deps)
+
+        # Add implicit dependencies (position-based within category)
+        todo_obj = db.query(Todo).filter(Todo.id == todo_id).first()
+        if todo_obj:
+            category = db.query(Category).filter(Category.id == todo_obj.category_id).first()
+            if category and category.name in todos_by_category:
+                category_todos = todos_by_category[category.name]
+                # Add all todos with lower position in the same category
+                for other_todo in category_todos:
+                    if other_todo.position < todo_obj.position:
+                        all_deps.add(other_todo.id)
+                        # Recursively add dependencies of todos above this one
+                        recursive_deps = get_all_dependencies(other_todo.id, visited.copy())
+                        all_deps.update(recursive_deps)
+
+        computed_deps[todo_id] = all_deps
+        return all_deps
+
+    # Compute dependencies for all todos
+    for todo in all_todos:
+        deps = get_all_dependencies(todo.id)
+        for dep_id in deps:
+            computed_dep = TodoDependencyComputed(todo_id=todo.id, depends_on_todo_id=dep_id)
+            db.add(computed_dep)
+
+    db.commit()
+
+    # Print statistics
+    explicit_count = db.query(TodoDependency).count()
+    computed_count = db.query(TodoDependencyComputed).count()
+    print(f"Dependencies synced: {explicit_count} explicit, {computed_count} computed (fully expanded + recursive)")
 
 
 def initialize_database():

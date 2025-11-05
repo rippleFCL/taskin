@@ -27,6 +27,7 @@ class TodoResponse(ORMModel):
     category_id: int
     reset_interval: int = 1
     reset_count: int = 0
+    position: int = 0
 
 
 class CategoryWithTodos(CategoryResponse):
