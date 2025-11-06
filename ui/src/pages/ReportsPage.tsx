@@ -110,13 +110,13 @@ const ReportsPage = (_props: ReportsPageProps) => {
     }
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
                     <h1 className="text-3xl font-bold">Reports</h1>
                     <p className="text-muted-foreground">Task completion reports and statistics</p>
                 </div>
-                <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 md:gap-3">
+                    <div className="flex flex-wrap items-center gap-2">
                         <label className="text-sm text-muted-foreground">Show last:</label>
                         <select
                             value={lastMode === 'custom' ? 'custom' : String(reportLimit)}
@@ -130,7 +130,7 @@ const ReportsPage = (_props: ReportsPageProps) => {
                                     setReportLimit(Number.isFinite(n) && n > 0 ? n : 10);
                                 }
                             }}
-                            className="px-3 py-1.5 rounded-md border bg-background text-foreground"
+                            className="px-3 py-1.5 rounded-md border bg-background text-foreground w-full sm:w-auto"
                         >
                             <option value={5}>5 days</option>
                             <option value={10}>10 days</option>
@@ -139,7 +139,7 @@ const ReportsPage = (_props: ReportsPageProps) => {
                             <option value="custom">Custom…</option>
                         </select>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                         {lastMode === 'custom' && (
                             <>
                                 <label className="text-sm text-muted-foreground">From</label>
@@ -155,7 +155,7 @@ const ReportsPage = (_props: ReportsPageProps) => {
                                         }
                                         setStartDate(val);
                                     }}
-                                    className="px-3 py-1.5 rounded-md border bg-background text-foreground"
+                                    className="px-3 py-1.5 rounded-md border bg-background text-foreground w-full sm:w-auto"
                                 />
                             </>
                         )}
@@ -169,7 +169,7 @@ const ReportsPage = (_props: ReportsPageProps) => {
                                 const val = sanitizeDateInput(e.target.value);
                                 setEndDate(val);
                             }}
-                            className="px-3 py-1.5 rounded-md border bg-background text-foreground"
+                            className="px-3 py-1.5 rounded-md border bg-background text-foreground w-full sm:w-auto"
                         />
                     </div>
                 </div>
@@ -228,7 +228,7 @@ const ReportsPage = (_props: ReportsPageProps) => {
                                                                 <table className="w-full text-sm">
                                                                     <thead>
                                                                         <tr className="border-b">
-                                                                            <th className="text-left py-2 px-2 font-semibold sticky left-0 z-10 bg-background">Task</th>
+                                                                            <th className="text-left py-2 px-2 font-semibold sticky left-0 z-10 bg-background border-r">Task</th>
                                                                             <th className="text-right py-2 px-2 font-semibold">Comp Rate</th>
                                                                             <th className="text-right py-2 px-2 font-semibold">Skip Rate</th>
                                                                             <th className="text-right py-2 px-2 font-semibold">Avg Duration</th>
@@ -240,7 +240,7 @@ const ReportsPage = (_props: ReportsPageProps) => {
                                                                     <tbody>
                                                                         {byCategory[cat].map((stat) => (
                                                                             <tr key={stat.todo_id} className="border-b hover:bg-muted/50">
-                                                                                <td className="py-2 px-2 sticky left-0 z-[1] bg-background">{stat.todo_title}</td>
+                                                                                <td className="py-2 px-2 sticky left-0 z-[1] bg-background border-r">{stat.todo_title}</td>
                                                                                 <td className="py-2 px-2 text-right">
                                                                                     <span className={stat.completion_rate >= 0.8 ? 'text-green-600 dark:text-green-400 font-semibold' : ''}>
                                                                                         {(stat.completion_rate * 100).toFixed(0)}%
@@ -297,7 +297,7 @@ const ReportsPage = (_props: ReportsPageProps) => {
                                 <Collapsible defaultOpen={false} className="group">
                                     <CollapsibleTrigger asChild>
                                         <CardHeader className="cursor-pointer">
-                                            <div className="flex items-start justify-between">
+                                            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                                                 <div>
                                                     <CardTitle className="flex items-center gap-2">
                                                         <Clock className="w-5 h-5" />
@@ -305,7 +305,7 @@ const ReportsPage = (_props: ReportsPageProps) => {
                                                     </CardTitle>
                                                     <CardDescription>{formatDate(report.created_at)}</CardDescription>
                                                 </div>
-                                                <div className="flex items-center gap-3">
+                                                <div className="flex flex-wrap items-center gap-2 md:gap-3 md:justify-end">
                                                     <div className="flex items-center gap-1 text-muted-foreground text-sm">
                                                         <CheckCircle className="w-4 h-4 text-green-600" />
                                                         {report.completed_todos} completed
@@ -356,7 +356,7 @@ const ReportsPage = (_props: ReportsPageProps) => {
                                                                 return (
                                                                     <div key={cat} className="border rounded-md">
                                                                         <div className="px-3 py-3">
-                                                                            <div className="flex items-center justify-between">
+                                                                            <div className="flex flex-wrap items-center justify-between gap-2">
                                                                                 <div className="text-base font-medium flex items-center gap-2">
                                                                                     {cat}
                                                                                     <Badge variant="secondary">{completed}/{total}</Badge>
