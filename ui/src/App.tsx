@@ -202,6 +202,7 @@ function App() {
             setCategories(categoriesData);
             setRecommendedTodos(recommendedData);
             setOneOffs(Array.isArray(oneOffData) ? oneOffData : []);
+            // recOneOffData is used only in Recommended tab rendering; keep separately if needed later
             saveCache(categoriesData, recommendedData);
             try { localStorage.setItem(LS_ONEOFFS, JSON.stringify(Array.isArray(oneOffData) ? oneOffData : [])); } catch { }
         } catch (err) {
@@ -552,6 +553,20 @@ function App() {
         }
     };
 
+    const handleOneOffStatusChange = async (id: number, status: TaskStatus) => {
+        // Update local one-offs list optimistically
+        setOneOffs(prev => prev.map(o => (o.id === id ? { ...o, status } : o)));
+        try {
+            if (navigator.onLine && serverOnline) {
+                await api.updateOneOffStatus(id, status);
+                loadData(false);
+            }
+        } catch (e) {
+            // Silent failure; next poll will sync
+            console.error(e);
+        }
+    };
+
     if (isLoading && !bootstrapped) {
         return (
             <div className="min-h-screen flex items-center justify-center">
@@ -631,7 +646,7 @@ function App() {
                                 >
                                     <Sparkles className="w-4 h-4" />
                                     <span>Recommended</span>
-                                    <span> ({recommendedTodos.length})</span>
+                                    <span> ({recommendedTodos.length + oneOffs.filter(o => o.status === 'incomplete').length})</span>
                                 </button>
                                 <button
                                     onClick={() => { navigate('/oneoff'); setNavOpen(false); }}
@@ -678,7 +693,7 @@ function App() {
                                         className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-md ${currentTab === 'recommended' ? 'bg-accent text-accent-foreground' : 'hover:bg-accent hover:text-accent-foreground'}`}
                                     >
                                         <Sparkles className="w-4 h-4" />
-                                        Recommended ({recommendedTodos.length})
+                                        Recommended ({recommendedTodos.length + oneOffs.filter(o => o.status === 'incomplete').length})
                                     </button>
                                 </NavigationMenuItem>
                                 <NavigationMenuItem>
@@ -733,7 +748,7 @@ function App() {
             >
                 <Routes>
                     <Route path="/all" element={<AllTasksPage categories={categories} summary={summary as any} onStatusChange={handleStatusChange} />} />
-                    <Route path="/recommended" element={<RecommendedPage todos={recommendedTodos} onStatusChange={handleStatusChange} />} />
+                    <Route path="/recommended" element={<RecommendedPage todos={recommendedTodos} oneOffs={oneOffs.filter(o => o.status === 'incomplete')} onStatusChange={handleStatusChange} onOneOffStatusChange={handleOneOffStatusChange} />} />
                     <Route path="/graph" element={<GraphPage />} />
                     <Route path="/reports" element={<ReportsPage />} />
                     <Route path="/oneoff" element={<OneOffsPage
