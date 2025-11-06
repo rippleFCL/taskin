@@ -12,7 +12,9 @@
             "module": "uvicorn",
             "args": [
                 "main:api",
-                "--reload"
+                "--reload",
+                "--host",
+                "0.0.0.0"
             ],
             "env": {
                 "ENV": "DEV"

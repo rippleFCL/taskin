@@ -91,7 +91,7 @@ def get_statistics(start_date: datetime, end_date: datetime, db: Session = Depen
         report_count: Number of recent reports to analyze (default 10)
     """
     # Get the most recent N reports
-    reports = db.query(Report).filter(Report.created_at >= start_date, Report.created_at <= end_date).all()
+    reports = db.query(Report).filter(Report.created_at >= start_date, Report.created_at <= end_date).order_by(Report.created_at.desc()).all()
     return generate_aggregated_statistics(reports)
 
 
