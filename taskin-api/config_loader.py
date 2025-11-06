@@ -22,7 +22,6 @@ class CategoryConfig(BaseModel):
 
 class AppConfig(BaseModel):
     webhook_url: Optional[HttpUrl] = None
-    base_uri: Optional[HttpUrl] = None
     categories: List[CategoryConfig] = Field(default_factory=list)
 
 
@@ -47,4 +46,3 @@ def init_config(config_path: str = "config.yml") -> AppConfig:
 CONFIG = init_config(_CONFIG_PATH)
 
 WEBHOOK_URL = str(CONFIG.webhook_url)
-UI_URI = str(CONFIG.base_uri)

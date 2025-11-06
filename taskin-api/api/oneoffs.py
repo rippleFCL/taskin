@@ -7,7 +7,7 @@ from urllib import request as urlrequest
 from urllib.error import URLError, HTTPError
 from models import get_db, OneOffTodo, TaskStatus
 from schemas import OneOffTodoResponse, OneOffTodoCreate, OneOffTodoUpdate
-from config_loader import UI_URI, WEBHOOK_URL
+from config_loader import WEBHOOK_URL
 
 router = APIRouter()
 
@@ -53,7 +53,7 @@ def create_oneoff_todo(
     # Fire-and-forget webhook notification if configured
     try:
         if WEBHOOK_URL:
-            background_tasks.add_task(_post_webhook, WEBHOOK_URL, {"title": item.title, "url": urljoin(UI_URI, "/oneoff")})
+            background_tasks.add_task(_post_webhook, WEBHOOK_URL, {"title": item.title})
     except Exception:
         # Do not block creation on webhook failures
         pass
