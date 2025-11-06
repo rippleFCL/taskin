@@ -228,8 +228,8 @@ const ReportsPage = (_props: ReportsPageProps) => {
                                                                 <table className="w-full text-sm">
                                                                     <thead>
                                                                         <tr className="border-b">
-                                                                            <th className="text-left py-2 px-2 font-semibold">Task</th>
-                                                                            <th className="text-right py-2 px-2 font-semibold">Comp-rate</th>
+                                                                            <th className="text-left py-2 px-2 font-semibold sticky left-0 z-10 bg-background">Task</th>
+                                                                            <th className="text-right py-2 px-2 font-semibold">Comp Rate</th>
                                                                             <th className="text-right py-2 px-2 font-semibold">Skip Rate</th>
                                                                             <th className="text-right py-2 px-2 font-semibold">Avg Duration</th>
                                                                             <th className="text-right py-2 px-2 font-semibold">Completed</th>
@@ -240,7 +240,7 @@ const ReportsPage = (_props: ReportsPageProps) => {
                                                                     <tbody>
                                                                         {byCategory[cat].map((stat) => (
                                                                             <tr key={stat.todo_id} className="border-b hover:bg-muted/50">
-                                                                                <td className="py-2 px-2">{stat.todo_title}</td>
+                                                                                <td className="py-2 px-2 sticky left-0 z-[1] bg-background">{stat.todo_title}</td>
                                                                                 <td className="py-2 px-2 text-right">
                                                                                     <span className={stat.completion_rate >= 0.8 ? 'text-green-600 dark:text-green-400 font-semibold' : ''}>
                                                                                         {(stat.completion_rate * 100).toFixed(0)}%
