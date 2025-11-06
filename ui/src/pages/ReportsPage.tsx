@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { ResetReport, AggregatedStatistics } from '../types';
 import { api } from '../api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Progress } from '../components/ui/progress';
 import { Badge } from '../components/ui/badge';
-import { Clock, TrendingUp, CheckCircle, XCircle, SkipForward } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../components/ui/collapsible';
+import { Clock, TrendingUp, CheckCircle, XCircle, SkipForward, ChevronDown } from 'lucide-react';
 
 interface ReportsPageProps { }
 
@@ -11,7 +13,6 @@ const ReportsPage = (_props: ReportsPageProps) => {
     const [reports, setReports] = useState<ResetReport[]>([]);
     const [statistics, setStatistics] = useState<AggregatedStatistics | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    // Non-blocking error handling: we render empty states instead of showing errors
     // Date range selection; default to last 10 days
     const [reportLimit, setReportLimit] = useState(10);
     const [lastMode, setLastMode] = useState<'preset' | 'custom'>('preset');
@@ -62,13 +63,11 @@ const ReportsPage = (_props: ReportsPageProps) => {
         if (repRes.status === 'fulfilled') {
             setReports(repRes.value);
         } else {
-            // If reports API fails, show no reports
             setReports([]);
         }
         if (statRes.status === 'fulfilled') {
             setStatistics(statRes.value);
         } else {
-            // If stats API fails, hide statistics section
             setStatistics(null);
         }
         setIsLoading(false);
@@ -109,9 +108,6 @@ const ReportsPage = (_props: ReportsPageProps) => {
             </div>
         );
     }
-
-    // Do not block the page on errors; we will render empty states instead
-
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -154,7 +150,6 @@ const ReportsPage = (_props: ReportsPageProps) => {
                                     max={endDate || MAX_DATE}
                                     onChange={(e) => {
                                         const val = sanitizeDateInput(e.target.value);
-                                        // Ensure start <= end
                                         if (val && endDate && val > endDate) {
                                             setEndDate(val);
                                         }
@@ -210,50 +205,69 @@ const ReportsPage = (_props: ReportsPageProps) => {
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="space-y-4">
+                            <div className="space-y-3">
                                 {statistics.task_statistics.length === 0 ? (
                                     <p className="text-muted-foreground">No statistics available yet.</p>
                                 ) : (
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full text-sm">
-                                            <thead>
-                                                <tr className="border-b">
-                                                    <th className="text-left py-2 px-2 font-semibold">Task</th>
-                                                    <th className="text-left py-2 px-2 font-semibold">Category</th>
-                                                    <th className="text-right py-2 px-2 font-semibold">Completion</th>
-                                                    <th className="text-right py-2 px-2 font-semibold">Skip Rate</th>
-                                                    <th className="text-right py-2 px-2 font-semibold">Avg In-Progress</th>
-                                                    <th className="text-right py-2 px-2 font-semibold">Completed</th>
-                                                    <th className="text-right py-2 px-2 font-semibold">Skipped</th>
-                                                    <th className="text-right py-2 px-2 font-semibold">Incomplete</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {statistics.task_statistics.map((stat) => (
-                                                    <tr key={stat.todo_id} className="border-b hover:bg-muted/50">
-                                                        <td className="py-2 px-2">{stat.todo_title}</td>
-                                                        <td className="py-2 px-2 text-muted-foreground">{stat.category_name}</td>
-                                                        <td className="py-2 px-2 text-right">
-                                                            <span className={stat.completion_rate >= 0.8 ? 'text-green-600 dark:text-green-400 font-semibold' : ''}>
-                                                                {(stat.completion_rate * 100).toFixed(0)}%
-                                                            </span>
-                                                        </td>
-                                                        <td className="py-2 px-2 text-right">
-                                                            <span className={stat.skip_rate >= 0.5 ? 'text-yellow-600 dark:text-yellow-400' : ''}>
-                                                                {(stat.skip_rate * 100).toFixed(0)}%
-                                                            </span>
-                                                        </td>
-                                                        <td className="py-2 px-2 text-right text-muted-foreground">
-                                                            {formatDuration(stat.avg_in_progress_duration_seconds)}
-                                                        </td>
-                                                        <td className="py-2 px-2 text-right">{stat.times_completed}</td>
-                                                        <td className="py-2 px-2 text-right">{stat.times_skipped}</td>
-                                                        <td className="py-2 px-2 text-right">{stat.times_incomplete}</td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                    (() => {
+                                        const byCategory: Record<string, typeof statistics.task_statistics> = {} as any;
+                                        for (const s of statistics.task_statistics) {
+                                            const key = s.category_name || 'Uncategorized';
+                                            (byCategory[key] ||= []).push(s);
+                                        }
+                                        const cats = Object.keys(byCategory).sort();
+                                        return (
+                                            <div className="space-y-3">
+                                                {cats.map((cat) => {
+                                                    return (
+                                                        <div key={cat} className="border rounded-md">
+                                                            <div className="px-3 py-3">
+                                                                <div className="text-base font-medium">{cat}</div>
+                                                            </div>
+                                                            <div className="overflow-x-auto border-t">
+                                                                <table className="w-full text-sm">
+                                                                    <thead>
+                                                                        <tr className="border-b">
+                                                                            <th className="text-left py-2 px-2 font-semibold">Task</th>
+                                                                            <th className="text-right py-2 px-2 font-semibold">Completion</th>
+                                                                            <th className="text-right py-2 px-2 font-semibold">Skip Rate</th>
+                                                                            <th className="text-right py-2 px-2 font-semibold">Avg In-Progress</th>
+                                                                            <th className="text-right py-2 px-2 font-semibold">Completed</th>
+                                                                            <th className="text-right py-2 px-2 font-semibold">Skipped</th>
+                                                                            <th className="text-right py-2 px-2 font-semibold">Incomplete</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        {byCategory[cat].map((stat) => (
+                                                                            <tr key={stat.todo_id} className="border-b hover:bg-muted/50">
+                                                                                <td className="py-2 px-2">{stat.todo_title}</td>
+                                                                                <td className="py-2 px-2 text-right">
+                                                                                    <span className={stat.completion_rate >= 0.8 ? 'text-green-600 dark:text-green-400 font-semibold' : ''}>
+                                                                                        {(stat.completion_rate * 100).toFixed(0)}%
+                                                                                    </span>
+                                                                                </td>
+                                                                                <td className="py-2 px-2 text-right">
+                                                                                    <span className={stat.skip_rate >= 0.5 ? 'text-yellow-600 dark:text-yellow-400' : ''}>
+                                                                                        {(stat.skip_rate * 100).toFixed(0)}%
+                                                                                    </span>
+                                                                                </td>
+                                                                                <td className="py-2 px-2 text-right text-muted-foreground">
+                                                                                    {formatDuration(stat.avg_in_progress_duration_seconds)}
+                                                                                </td>
+                                                                                <td className="py-2 px-2 text-right">{stat.times_completed}</td>
+                                                                                <td className="py-2 px-2 text-right">{stat.times_skipped}</td>
+                                                                                <td className="py-2 px-2 text-right">{stat.times_incomplete}</td>
+                                                                            </tr>
+                                                                        ))}
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        );
+                                    })()
                                 )}
                             </div>
                         </CardContent>
@@ -280,80 +294,113 @@ const ReportsPage = (_props: ReportsPageProps) => {
                     ) : (
                         reports.map((report) => (
                             <Card key={report.id}>
-                                <CardHeader>
-                                    <div className="flex items-start justify-between">
-                                        <div>
-                                            <CardTitle className="flex items-center gap-2">
-                                                <Clock className="w-5 h-5" />
-                                                Reset Report #{report.id}
-                                            </CardTitle>
-                                            <CardDescription>{formatDate(report.created_at)}</CardDescription>
-                                        </div>
-                                        <div className="flex gap-2 text-sm">
-                                            <div className="flex items-center gap-1 text-muted-foreground">
-                                                <CheckCircle className="w-4 h-4 text-green-600" />
-                                                {report.completed_todos} completed
-                                            </div>
-                                            <div className="flex items-center gap-1 text-muted-foreground">
-                                                <SkipForward className="w-4 h-4 text-yellow-600" />
-                                                {report.skipped_todos} skipped
-                                            </div>
-                                            <div className="flex items-center gap-1 text-muted-foreground">
-                                                <XCircle className="w-4 h-4 text-gray-600" />
-                                                {report.incomplete_todos} incomplete
-                                            </div>
-                                        </div>
-                                    </div>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="mb-3">
-                                        <div className="text-sm text-muted-foreground mb-2">
-                                            Total tasks processed: {report.total_todos}
-                                        </div>
-                                        <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-                                            <div
-                                                className="h-full bg-green-500"
-                                                style={{
-                                                    width: `${report.total_todos > 0 ? (report.completed_todos / report.total_todos) * 100 : 0}%`,
-                                                }}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {(report.task_reports?.length ?? 0) > 0 && (
-                                        <details className="mt-4">
-                                            <summary className="cursor-pointer font-semibold hover:text-primary">
-                                                View {(report.task_reports?.length ?? 0)} task details
-                                            </summary>
-                                            <div className="mt-3 space-y-2 max-h-96 overflow-y-auto">
-                                                {(report.task_reports ?? []).map((task) => (
-                                                    <div
-                                                        key={task.id}
-                                                        className="flex items-center justify-between py-2 px-3 rounded-md border hover:bg-muted/50"
-                                                    >
-                                                        <div className="flex-1">
-                                                            <div className="font-medium">{task.todo_title}</div>
-                                                            <div className="text-xs text-muted-foreground">
-                                                                {task.category_name}
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex items-center gap-3">
-                                                            {task.in_progress_duration_seconds !== null && (
-                                                                <div className="text-xs text-muted-foreground flex items-center gap-1">
-                                                                    <Clock className="w-3 h-3" />
-                                                                    {formatDuration(task.in_progress_duration_seconds)}
-                                                                </div>
-                                                            )}
-                                                            <Badge className={getStatusColor(task.final_status)}>
-                                                                {task.final_status}
-                                                            </Badge>
-                                                        </div>
+                                <Collapsible defaultOpen={false} className="group">
+                                    <CollapsibleTrigger asChild>
+                                        <CardHeader className="cursor-pointer">
+                                            <div className="flex items-start justify-between">
+                                                <div>
+                                                    <CardTitle className="flex items-center gap-2">
+                                                        <Clock className="w-5 h-5" />
+                                                        Reset Report #{report.id}
+                                                    </CardTitle>
+                                                    <CardDescription>{formatDate(report.created_at)}</CardDescription>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <div className="flex items-center gap-1 text-muted-foreground text-sm">
+                                                        <CheckCircle className="w-4 h-4 text-green-600" />
+                                                        {report.completed_todos} completed
                                                     </div>
-                                                ))}
+                                                    <div className="flex items-center gap-1 text-muted-foreground text-sm">
+                                                        <SkipForward className="w-4 h-4 text-yellow-600" />
+                                                        {report.skipped_todos} skipped
+                                                    </div>
+                                                    <div className="flex items-center gap-1 text-muted-foreground text-sm">
+                                                        <XCircle className="w-4 h-4 text-gray-600" />
+                                                        {report.incomplete_todos} incomplete
+                                                    </div>
+                                                    <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+                                                </div>
                                             </div>
-                                        </details>
-                                    )}
-                                </CardContent>
+                                        </CardHeader>
+                                    </CollapsibleTrigger>
+                                    <CollapsibleContent>
+                                        <CardContent>
+                                            <div className="mb-3">
+                                                <div className="text-sm text-muted-foreground mb-2">
+                                                    Total tasks processed: {report.total_todos}
+                                                </div>
+                                                <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                                                    <div
+                                                        className="h-full bg-green-500"
+                                                        style={{
+                                                            width: `${report.total_todos > 0 ? (report.completed_todos / report.total_todos) * 100 : 0}%`,
+                                                        }}
+                                                    />
+                                                </div>
+                                            </div>
+                                            {(report.task_reports?.length ?? 0) > 0 && (
+                                                (() => {
+                                                    const byCategory: Record<string, NonNullable<typeof report.task_reports>> = {} as any;
+                                                    for (const t of report.task_reports ?? []) {
+                                                        const key = t.category_name || 'Uncategorized';
+                                                        (byCategory[key] ||= []).push(t);
+                                                    }
+                                                    const cats = Object.keys(byCategory).sort();
+                                                    return (
+                                                        <div className="mt-4 space-y-3">
+                                                            {cats.map((cat) => {
+                                                                const tasks = byCategory[cat];
+                                                                const completed = tasks.filter(t => t.final_status === 'complete').length;
+                                                                const total = tasks.length;
+                                                                const pct = total > 0 ? (completed / total) * 100 : 0;
+                                                                return (
+                                                                    <div key={cat} className="border rounded-md">
+                                                                        <div className="px-3 py-3">
+                                                                            <div className="flex items-center justify-between">
+                                                                                <div className="text-base font-medium flex items-center gap-2">
+                                                                                    {cat}
+                                                                                    <Badge variant="secondary">{completed}/{total}</Badge>
+                                                                                </div>
+                                                                                <div className="text-xs text-muted-foreground">{tasks.length} tasks</div>
+                                                                            </div>
+                                                                            <div className="mt-2">
+                                                                                <Progress value={pct} />
+                                                                                <div className="mt-1 text-xs text-muted-foreground">{completed}/{total} completed</div>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="mt-2 space-y-2 max-h-96 overflow-y-auto border-t">
+                                                                            {tasks.map((task) => (
+                                                                                <div
+                                                                                    key={task.id}
+                                                                                    className="flex items-center justify-between py-2 px-3 hover:bg-muted/50"
+                                                                                >
+                                                                                    <div className="flex-1">
+                                                                                        <div className="font-medium">{task.todo_title}</div>
+                                                                                    </div>
+                                                                                    <div className="flex items-center gap-3">
+                                                                                        {task.in_progress_duration_seconds !== null && (
+                                                                                            <div className="text-xs text-muted-foreground flex items-center gap-1">
+                                                                                                <Clock className="w-3 h-3" />
+                                                                                                {formatDuration(task.in_progress_duration_seconds)}
+                                                                                            </div>
+                                                                                        )}
+                                                                                        <Badge className={getStatusColor(task.final_status)}>
+                                                                                            {task.final_status}
+                                                                                        </Badge>
+                                                                                    </div>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    );
+                                                })()
+                                            )}
+                                        </CardContent>
+                                    </CollapsibleContent>
+                                </Collapsible>
                             </Card>
                         ))
                     )}
