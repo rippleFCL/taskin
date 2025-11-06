@@ -99,3 +99,8 @@ def update_oneoff_status(oneoff_id: int, status: TaskStatus, db: Session = Depen
     db.commit()
     db.refresh(item)
     return item
+
+@router.get("/oneoff-todos/recommended", response_model=List[OneOffTodoResponse])
+def get_recommended_oneoff_todos(db: Session = Depends(get_db)):
+    """Get recommended one-off todos."""
+    return db.query(OneOffTodo).filter(OneOffTodo.status == TaskStatus.incomplete).all()

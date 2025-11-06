@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from typing import List
 from datetime import datetime
 from models import (
+    OneOffTodo,
+    TodoDependency,
     get_db,
     Todo,
     TaskStatus,
@@ -84,6 +86,20 @@ def get_recommended_todos(db: Session = Depends(get_db)):
     for todo in incomplete_todos:
         # Get ALL computed dependencies for this todo
         dependencies = db.query(TodoDependencyComputed).filter(TodoDependencyComputed.todo_id == todo.id).all()
+        exp_deps = db.query(TodoDependency).filter(TodoDependency.todo_id == todo.id).all()
+
+        one_off_satisfied = True
+        for dep in exp_deps:
+            if dep.depends_on_all_oneoffs:
+                # Check if there are any incomplete one-off todos
+                incomplete_oneoffs = (
+                    db.query(OneOffTodo)
+                    .filter(OneOffTodo.status.in_([TaskStatus.incomplete, TaskStatus.in_progress]))
+                    .all()
+                )
+                if incomplete_oneoffs:
+                    one_off_satisfied = False
+                    break
 
         if not dependencies:
             # No dependencies means it's always recommended (if incomplete)
@@ -96,7 +112,7 @@ def get_recommended_todos(db: Session = Depends(get_db)):
         for dep in dependencies:
             # All computed dependencies are todo->todo
             dep_todo = db.query(Todo).filter(Todo.id == dep.depends_on_todo_id).first()
-            if not dep_todo or dep_todo.status not in [TaskStatus.complete, TaskStatus.skipped]:  # type: ignore
+            if not dep_todo or dep_todo.status not in [TaskStatus.complete, TaskStatus.skipped] or not one_off_satisfied:  # type: ignore
                 all_satisfied = False
                 break
 
@@ -104,3 +120,4 @@ def get_recommended_todos(db: Session = Depends(get_db)):
             recommended.append(todo)
 
     return recommended
+

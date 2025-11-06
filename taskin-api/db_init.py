@@ -6,7 +6,7 @@ from alembic import command
 import os
 
 
-def sync_db_from_config(db: Session, config_path: str = "config.yml"):
+def sync_db_from_config(db: Session):
     """
     Sync database with config file:
     - Add new categories and todos from config
@@ -114,10 +114,10 @@ def sync_db_from_config(db: Session, config_path: str = "config.yml"):
     print(f"Database synced with config: {len(config_categories)} categories, {len(config_todos)} todos")
 
     # 5. Sync dependencies - must happen after todos are created
-    sync_dependencies(db, config, config_todos, category_map)
+    sync_dependencies(db, config)
 
 
-def sync_dependencies(db: Session, config: AppConfig, config_todos: dict, category_map: dict):
+def sync_dependencies(db: Session, config: AppConfig):
     """Sync todo dependencies from config.
 
     Creates two types of dependency tables:
@@ -127,129 +127,104 @@ def sync_dependencies(db: Session, config: AppConfig, config_todos: dict, catego
     # Clear existing dependencies
     db.query(TodoDependency).delete()
     db.query(TodoDependencyComputed).delete()
-
     # Build todo lookup maps
-    todo_map = {}  # (category_name, todo_title) -> todo object
-    title_to_todo = {}  # title -> todo object (for cross-category lookup)
-    todos_by_category = {}  # category_name -> list of todos sorted by position
-
-    all_todos = db.query(Todo).order_by(Todo.category_id, Todo.position).all()
-
-    for todo in all_todos:
+    todo_id_map: dict[str, int] = {}  # (category_name, todo_title) -> todo object
+    cat_todo_map: dict[str, set[int]] = {}  # category_name -> category object
+    for todo in db.query(Todo).all():
         category = db.query(Category).filter(Category.id == todo.category_id).first()
         if category:
-            key = (category.name, todo.title)
-            todo_map[key] = todo
-            title_to_todo[todo.title] = todo
+            if todo.title in todo_id_map:
+                raise ValueError(f"Duplicate todo title '{todo.title}' found in database for dependency sync")
 
-            if category.name not in todos_by_category:
-                todos_by_category[category.name] = []
-            todos_by_category[category.name].append(todo)
+            todo_id_map[todo.title] = todo.id
+            if category.name not in cat_todo_map:
+                cat_todo_map[category.name] = set()
+            cat_todo_map[category.name].add(todo.id)
+        else:
+            print(f"Warning: Todo '{todo.title}' has no valid category for dependency sync")
+    category_id_map = {}
+    for category in db.query(Category).all():
+        category_id_map[category.name] = category.id
 
-    # Step 1: Create explicit dependencies (for graph visualization)
-    print("Creating explicit dependencies...")
-    for category_data in config.categories:
-        category_name = category_data.name
 
-        for todo_data in category_data.todos:
-            todo_title = todo_data.title
-            key = (category_name, todo_title)
+    explicit_deps = 0
 
-            if key not in todo_map:
+    root_nodes = set()
+
+    todo_dep_map = {}  # todo_id -> set of dependent todo_ids
+    for category in config.categories:
+        for todo in category.todos:
+            has_deps = False
+            todo_id = todo_id_map.get(todo.title)
+            if not todo_id:
                 continue
 
-            todo = todo_map[key]
+            # Explicit dependencies
+            for dep in todo.depends_on_todos:
+                dep_id = todo_id_map.get(dep)
+                if dep_id:
+                    # Add to explicit dependency table
+                    explicit_deps += 1
+                    todo_dep = TodoDependency(todo_id=todo_id, depends_on_todo_id=dep_id)
+                    has_deps = True
+                    db.add(todo_dep)
+                    if dep_id not in todo_dep_map:
+                        todo_dep_map[dep_id] = set()
+                    todo_dep_map[dep_id].add(todo_id)
+                else:
+                    print(f"Warning: Cannot find todo '{dep}' in category '{category.name}' for dependency of todo '{todo.title}'")
+            for dep_cat in todo.depends_on_categories:
+                dep_cat_id = category_id_map.get(dep_cat)
+                if dep_cat_id and (deps := cat_todo_map.get(dep_cat, set())):
+                    for dep_todo_id in deps:
+                        if dep_todo_id not in todo_dep_map:
+                            todo_dep_map[dep_todo_id] = set()
+                        todo_dep_map[dep_todo_id].add(todo_id)
+                    explicit_deps += 1
+                    todo_cat_dep = TodoDependency(
+                        todo_id=todo_id, depends_on_category_id=dep_cat_id
+                    )
+                    has_deps = True
+                    db.add(todo_cat_dep)
+                else:
+                    print(f"Warning: Cannot find category '{dep_cat}' for dependency of todo '{todo.title}'")
+            if todo.depends_on_all_oneoffs:
+                explicit_deps += 1
+                todo_oneoff_dep = TodoDependency(
+                    todo_id=todo_id, depends_on_all_oneoffs=1
+                )
+                db.add(todo_oneoff_dep)
+            if not has_deps:
+                root_nodes.add(todo_id)
 
-            # Explicit todo dependencies
-            for dep_todo_title in todo_data.depends_on_todos:
-                dep_todo = title_to_todo.get(dep_todo_title)
-                if dep_todo:
-                    dependency = TodoDependency(todo_id=todo.id, depends_on_todo_id=dep_todo.id)
-                    db.add(dependency)
+    def recursive_dep_solver(todo_id: int, upstream_deps: set[int]):
+        output_map: dict[int, set[int]] = dict()
+        output_map[todo_id] = upstream_deps.copy()
+        upstream_deps.add(todo_id)
+        if todo_id not in todo_dep_map:
+            return output_map
+        for dep_id in todo_dep_map[todo_id]:
+            if dep_id not in upstream_deps:
+                for dep_id, deps in recursive_dep_solver(dep_id, upstream_deps.copy()).items():
+                    if dep_id not in output_map:
+                        output_map[dep_id] = deps
+                    else:
+                        output_map[dep_id].update(deps)
+        return output_map
 
-            # Explicit category dependencies (NOT expanded here)
-            for dep_category_name in todo_data.depends_on_categories:
-                if dep_category_name in category_map:
-                    dependency = TodoDependency(todo_id=todo.id, depends_on_category_id=category_map[dep_category_name].id)
-                    db.add(dependency)
+    deep_dep_map: dict[int, set[int]] = {}
+    for root_id in root_nodes:
+        deep_dep_map.update(recursive_dep_solver(root_id, set()))
 
-            # Explicit all_oneoffs dependency
-            if todo_data.depends_on_all_oneoffs:
-                dependency = TodoDependency(todo_id=todo.id, depends_on_all_oneoffs=1)
-                db.add(dependency)
-
-    db.commit()
-
-    # Step 2: Compute fully expanded dependencies recursively
-    print("Computing recursive dependencies...")
-    computed_deps = {}  # todo_id -> set of all dependency todo_ids
-
-    def get_all_dependencies(todo_id: int, visited: set | None = None) -> set:
-        """Recursively get all dependencies for a todo."""
-        if visited is None:
-            visited = set()
-
-        if todo_id in visited:
-            return set()  # Avoid cycles
-
-        visited.add(todo_id)
-
-        if todo_id in computed_deps:
-            return computed_deps[todo_id]
-
-        all_deps = set()
-
-        # Get explicit dependencies from TodoDependency
-        explicit_deps = db.query(TodoDependency).filter(TodoDependency.todo_id == todo_id).all()
-
-        for dep in explicit_deps:
-            # Handle todo dependencies
-            if dep.depends_on_todo_id is not None:
-                all_deps.add(dep.depends_on_todo_id)
-                # Recursively add dependencies of this dependency
-                recursive_deps = get_all_dependencies(dep.depends_on_todo_id, visited.copy())
-                all_deps.update(recursive_deps)
-
-            # Handle category dependencies - expand to all todos in category
-            elif dep.depends_on_category_id is not None:
-                category = db.query(Category).filter(Category.id == dep.depends_on_category_id).first()
-                if category and category.name in todos_by_category:
-                    for cat_todo in todos_by_category[category.name]:
-                        all_deps.add(cat_todo.id)
-                        # Recursively add dependencies of each todo in the category
-                        recursive_deps = get_all_dependencies(cat_todo.id, visited.copy())
-                        all_deps.update(recursive_deps)
-
-        # Add implicit dependencies (position-based within category)
-        todo_obj = db.query(Todo).filter(Todo.id == todo_id).first()
-        if todo_obj:
-            category = db.query(Category).filter(Category.id == todo_obj.category_id).first()
-            if category and category.name in todos_by_category:
-                category_todos = todos_by_category[category.name]
-                # Add all todos with lower position in the same category
-                for other_todo in category_todos:
-                    if other_todo.position < todo_obj.position:
-                        all_deps.add(other_todo.id)
-                        # Recursively add dependencies of todos above this one
-                        recursive_deps = get_all_dependencies(other_todo.id, visited.copy())
-                        all_deps.update(recursive_deps)
-
-        computed_deps[todo_id] = all_deps
-        return all_deps
-
-    # Compute dependencies for all todos
-    for todo in all_todos:
-        deps = get_all_dependencies(todo.id)
+    for todo_id, deps in deep_dep_map.items():
         for dep_id in deps:
-            computed_dep = TodoDependencyComputed(todo_id=todo.id, depends_on_todo_id=dep_id)
-            db.add(computed_dep)
-
+            if dep_id != todo_id:
+                comp_dep = TodoDependencyComputed(todo_id=todo_id, depends_on_todo_id=dep_id)
+                db.add(comp_dep)
     db.commit()
 
-    # Print statistics
-    explicit_count = db.query(TodoDependency).count()
-    computed_count = db.query(TodoDependencyComputed).count()
-    print(f"Dependencies synced: {explicit_count} explicit, {computed_count} computed (fully expanded + recursive)")
+    implicit_deps = sum(len(deps) for deps in deep_dep_map.values())
+    print(f"Synchronized dependencies: {explicit_deps} explicit, {implicit_deps} implicit")
 
 
 def initialize_database():
