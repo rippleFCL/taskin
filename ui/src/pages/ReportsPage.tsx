@@ -60,7 +60,8 @@ const ReportsPage = (_props: ReportsPageProps) => {
             api.getStatisticsByDateRange(start, end),
         ]);
         if (repRes.status === 'fulfilled') {
-            setReports(repRes.value);
+            const sorted = [...repRes.value].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+            setReports(sorted);
         } else {
             setReports([]);
         }

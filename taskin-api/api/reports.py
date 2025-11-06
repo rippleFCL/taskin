@@ -1,5 +1,4 @@
-from dataclasses import dataclass
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from typing import List
 from models import datetime, get_db, Report, TaskStatus
@@ -14,9 +13,14 @@ router = APIRouter()
 
 @router.get("/reports/{start_date}/{end_date}", response_model=list[ResetReportResponse])
 def get_report(start_date: datetime, end_date: datetime, db: Session = Depends(get_db)):
-    """Get a specific reset report with all task details."""
-    report = db.query(Report).filter(Report.created_at >= start_date, Report.created_at <= end_date).all()
-    return report
+    """Get all reset reports within the date range [start_date, end_date], newest first."""
+    reports = (
+        db.query(Report)
+        .filter(Report.created_at >= start_date, Report.created_at <= end_date)
+        .order_by(Report.created_at.desc())
+        .all()
+    )
+    return reports
 
 
 def generate_aggregated_statistics(reports: List[Report]) -> AggregatedStatistics:
