@@ -44,7 +44,6 @@ def generate_aggregated_statistics(reports: List[Report]) -> AggregatedStatistic
                 )
                 task_statistics_map[(task_report.todo_title, task_report.category_name)] = ts
 
-
             ts.total_appearances += 1
             if task_report.final_status == TaskStatus.complete:
                 ts.times_completed += 1
@@ -59,8 +58,8 @@ def generate_aggregated_statistics(reports: List[Report]) -> AggregatedStatistic
     for ts in task_statistics_map.values():
         # Calculate rates
         if ts.total_appearances > 0:
-            ts.completion_rate = (ts.times_completed / ts.total_appearances)
-            ts.skip_rate = (ts.times_skipped / ts.total_appearances)
+            ts.completion_rate = ts.times_completed / ts.total_appearances
+            ts.skip_rate = ts.times_skipped / ts.total_appearances
             ts.avg_in_progress_duration_seconds = ts.tot_in_progress_duration_seconds / ts.total_appearances
         else:
             ts.completion_rate = 0.0
@@ -95,7 +94,10 @@ def get_statistics(start_date: datetime, end_date: datetime, db: Session = Depen
         report_count: Number of recent reports to analyze (default 10)
     """
     # Get the most recent N reports
-    reports = db.query(Report).filter(Report.created_at >= start_date, Report.created_at <= end_date).order_by(Report.created_at.desc()).all()
+    reports = (
+        db.query(Report)
+        .filter(Report.created_at >= start_date, Report.created_at <= end_date)
+        .order_by(Report.created_at.desc())
+        .all()
+    )
     return generate_aggregated_statistics(reports)
-
-
