@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { ResetReport, AggregatedStatistics } from '../types';
 import { api } from '../api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Progress } from '../components/ui/progress';
 import { Badge } from '../components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../components/ui/collapsible';
 import { Clock, TrendingUp, CheckCircle, XCircle, SkipForward, ChevronDown } from 'lucide-react';
@@ -329,14 +328,25 @@ const ReportsPage = (_props: ReportsPageProps) => {
                                                 <div className="text-sm text-muted-foreground mb-2">
                                                     Total tasks processed: {report.total_todos}
                                                 </div>
-                                                <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-                                                    <div
-                                                        className="h-full bg-green-500"
-                                                        style={{
-                                                            width: `${report.total_todos > 0 ? (report.completed_todos / report.total_todos) * 100 : 0}%`,
-                                                        }}
-                                                    />
-                                                </div>
+                                                {(() => {
+                                                    const total = report.total_todos || 0;
+                                                    const completedPct = total > 0 ? (report.completed_todos / total) * 100 : 0;
+                                                    const skippedPct = total > 0 ? (report.skipped_todos / total) * 100 : 0;
+                                                    return (
+                                                        <div className="w-full rounded-full h-2 overflow-hidden relative bg-gray-500 dark:bg-gray-700">
+                                                            {/* Completed (left) */}
+                                                            <div
+                                                                className="absolute left-0 top-0 bottom-0 bg-green-500"
+                                                                style={{ width: `${completedPct}%` }}
+                                                            />
+                                                            {/* Skipped (right, dark grey) */}
+                                                            <div
+                                                                className="absolute right-0 top-0 bottom-0 bg-green-900 dark:bg-green-800"
+                                                                style={{ width: `${skippedPct}%` }}
+                                                            />
+                                                        </div>
+                                                    );
+                                                })()}
                                             </div>
                                             {(report.task_reports?.length ?? 0) > 0 && (
                                                 (() => {
@@ -352,7 +362,6 @@ const ReportsPage = (_props: ReportsPageProps) => {
                                                                 const tasks = byCategory[cat];
                                                                 const completed = tasks.filter(t => t.final_status === 'complete').length;
                                                                 const total = tasks.length;
-                                                                const pct = total > 0 ? (completed / total) * 100 : 0;
                                                                 return (
                                                                     <div key={cat} className="border rounded-md">
                                                                         <div className="px-3 py-3">
@@ -364,7 +373,23 @@ const ReportsPage = (_props: ReportsPageProps) => {
                                                                                 <div className="text-xs text-muted-foreground">{tasks.length} tasks</div>
                                                                             </div>
                                                                             <div className="mt-2">
-                                                                                <Progress value={pct} />
+                                                                                {(() => {
+                                                                                    const skipped = tasks.filter(t => t.final_status === 'skipped').length;
+                                                                                    const completedPct = total > 0 ? (completed / total) * 100 : 0;
+                                                                                    const skippedPct = total > 0 ? (skipped / total) * 100 : 0;
+                                                                                    return (
+                                                                                        <div className="w-full rounded-full h-2 overflow-hidden relative bg-gray-500 dark:bg-gray-700">
+                                                                                            <div
+                                                                                                className="absolute left-0 top-0 bottom-0 bg-green-500"
+                                                                                                style={{ width: `${completedPct}%` }}
+                                                                                            />
+                                                                                            <div
+                                                                                                className="absolute right-0 top-0 bottom-0 bg-green-900 dark:bg-green-800"
+                                                                                                style={{ width: `${skippedPct}%` }}
+                                                                                            />
+                                                                                        </div>
+                                                                                    );
+                                                                                })()}
                                                                                 <div className="mt-1 text-xs text-muted-foreground">{completed}/{total} completed</div>
                                                                             </div>
                                                                         </div>

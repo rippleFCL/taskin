@@ -1,6 +1,5 @@
 import { CategoryWithTodos, TaskStatus } from '../types';
 import { Card, CardContent } from '../components/ui/card';
-import { Progress } from '../components/ui/progress';
 import { CategoryCard } from '../components/CategoryCard';
 import { Check, Circle, CircleDashed, SkipForward } from 'lucide-react';
 
@@ -33,7 +32,25 @@ export default function AllTasksPage({ categories, summary, onStatusChange }: Pr
                             {summary.complete}/{summary.total} complete
                         </div>
                     </div>
-                    <Progress value={summary.percentComplete} />
+                    {(() => {
+                        const total = summary.total || 0;
+                        const completedPct = total > 0 ? (summary.complete / total) * 100 : 0;
+                        const skippedPct = total > 0 ? (summary.skipped / total) * 100 : 0;
+                        return (
+                            <div className="w-full rounded-full h-2 overflow-hidden relative bg-gray-500 dark:bg-gray-700">
+                                {/* Completed (left) */}
+                                <div
+                                    className="absolute left-0 top-0 bottom-0 bg-green-500"
+                                    style={{ width: `${completedPct}%` }}
+                                />
+                                {/* Skipped (right, dark grey) */}
+                                <div
+                                    className="absolute right-0 top-0 bottom-0 bg-green-900 dark:bg-green-800"
+                                    style={{ width: `${skippedPct}%` }}
+                                />
+                            </div>
+                        );
+                    })()}
                     <div className="mt-4 grid grid-cols-2 sm:grid-cols-7 gap-3 text-sm">
                         <div className="rounded-md border p-3 bg-muted/40">
                             <div className="text-muted-foreground text-xs">Total</div>

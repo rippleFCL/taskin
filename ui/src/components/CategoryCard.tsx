@@ -3,7 +3,6 @@ import { CategoryWithTodos, TaskStatus } from '../types';
 import { TodoItem } from './TodoItem';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
-import { Progress } from './ui/progress';
 import { Badge } from './ui/badge';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 
@@ -19,7 +18,6 @@ export function CategoryCard({ category, onStatusChange }: CategoryCardProps) {
     const completedCount = category.todos.filter(t => t.status === 'complete').length;
     const skippedCount = category.todos.filter(t => t.status === 'skipped').length;
     const totalCount = category.todos.length;
-    const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
     const sortRank = (status: TaskStatus) => {
         if (status === 'complete') return 0;
         if (status === 'skipped') return 0;
@@ -59,7 +57,25 @@ export function CategoryCard({ category, onStatusChange }: CategoryCardProps) {
                                     <CardDescription>{category.description}</CardDescription>
                                 )}
                                 <div className="mt-2">
-                                    <Progress value={progress} />
+                                    {(() => {
+                                        const total = totalCount || 0;
+                                        const completedPct = total > 0 ? (completedCount / total) * 100 : 0;
+                                        const skippedPct = total > 0 ? (skippedCount / total) * 100 : 0;
+                                        return (
+                                            <div className="w-full rounded-full h-2 overflow-hidden relative bg-gray-500 dark:bg-gray-700">
+                                                {/* Completed (left) */}
+                                                <div
+                                                    className="absolute left-0 top-0 bottom-0 bg-green-500"
+                                                    style={{ width: `${completedPct}%` }}
+                                                />
+                                                {/* Skipped (right, dark gray) */}
+                                                <div
+                                                    className="absolute right-0 top-0 bottom-0 bg-green-900 dark:bg-green-800"
+                                                    style={{ width: `${skippedPct}%` }}
+                                                />
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                             </div>
                         </div>
