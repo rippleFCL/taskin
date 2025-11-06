@@ -229,9 +229,9 @@ const ReportsPage = (_props: ReportsPageProps) => {
                                                                     <thead>
                                                                         <tr className="border-b">
                                                                             <th className="text-left py-2 px-2 font-semibold">Task</th>
-                                                                            <th className="text-right py-2 px-2 font-semibold">Completion</th>
+                                                                            <th className="text-right py-2 px-2 font-semibold">Comp-rate</th>
                                                                             <th className="text-right py-2 px-2 font-semibold">Skip Rate</th>
-                                                                            <th className="text-right py-2 px-2 font-semibold">Avg In-Progress</th>
+                                                                            <th className="text-right py-2 px-2 font-semibold">Avg Duration</th>
                                                                             <th className="text-right py-2 px-2 font-semibold">Completed</th>
                                                                             <th className="text-right py-2 px-2 font-semibold">Skipped</th>
                                                                             <th className="text-right py-2 px-2 font-semibold">Incomplete</th>
