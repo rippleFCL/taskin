@@ -1,4 +1,4 @@
-import { CategoryWithTodos, TaskStatus, TodoWithCategory, OneOffTodo, DependencyGraph } from './types';
+import { CategoryWithTodos, TaskStatus, TodoWithCategory, OneOffTodo, DependencyGraph, ResetReport, AggregatedStatistics } from './types';
 
 const API_BASE = '/api';
 
@@ -79,6 +79,35 @@ export const api = {
   async getDependencyGraph(): Promise<DependencyGraph> {
     const response = await fetch(`${API_BASE}/dependency-graph`);
     if (!response.ok) throw new Error('Failed to fetch dependency graph');
+    return response.json();
+  },
+
+  // Reports
+  async getReportsByDateRange(start: Date | string, end: Date | string): Promise<ResetReport[]> {
+    const toIso = (d: Date | string) => {
+      if (d instanceof Date) return d.toISOString();
+      // If date-only string (YYYY-MM-DD), assume full day range when used
+      // Here we pass through; caller ensures start/end cover full day as needed
+      try { return new Date(d).toISOString(); } catch { return String(d); }
+    };
+    const startIso = encodeURIComponent(toIso(start));
+    const endIso = encodeURIComponent(toIso(end));
+    const response = await fetch(`${API_BASE}/reports/${startIso}/${endIso}`);
+    if (!response.ok) throw new Error('Failed to fetch reports');
+    const data = await response.json();
+    const arr: any[] = Array.isArray(data) ? data : (data && typeof data === 'object' ? [data] : []);
+    return arr.map((r: ResetReport) => ({
+      ...r,
+      task_reports: Array.isArray((r as any).task_reports) ? (r as any).task_reports : [],
+    }));
+  },
+
+  async getStatisticsByDateRange(start: Date | string, end: Date | string): Promise<AggregatedStatistics> {
+    const toIso = (d: Date | string) => (d instanceof Date ? d.toISOString() : new Date(d).toISOString());
+    const startIso = encodeURIComponent(toIso(start));
+    const endIso = encodeURIComponent(toIso(end));
+    const response = await fetch(`${API_BASE}/statistics/${startIso}/${endIso}`);
+    if (!response.ok) throw new Error('Failed to fetch statistics');
     return response.json();
   },
 };

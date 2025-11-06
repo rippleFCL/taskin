@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from db_init import initialize_database
-from routes import router
+from api import categories, todos, oneoffs, dependencies, reports
 import structlog
 
 # Configure logging
@@ -61,8 +61,12 @@ api.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routes
-api.include_router(router, prefix="/api", tags=["todos"])
+# Include routers from api submodules
+api.include_router(categories.router, prefix="/api", tags=["categories"])
+api.include_router(todos.router, prefix="/api", tags=["todos"])
+api.include_router(oneoffs.router, prefix="/api", tags=["oneoffs"])
+api.include_router(dependencies.router, prefix="/api", tags=["dependencies"])
+api.include_router(reports.router, prefix="/api", tags=["reports"])
 
 
 @api.get("/api/health")

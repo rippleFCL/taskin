@@ -1,16 +1,17 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, Routes, Route, Navigate } from 'react-router-dom';
 import { CategoryWithTodos, TodoWithCategory, TaskStatus, OneOffTodo } from './types';
 import { api } from './api';
-import { CategoryCard } from './components/CategoryCard';
-import { RefreshCw, RotateCcw, ListTodo, Sparkles, Check, Circle, CircleDashed, Moon, Sun, Plus, Trash, Pencil, X, Menu, Network, SkipForward } from 'lucide-react';
+import { RefreshCw, RotateCcw, ListTodo, Sparkles, Moon, Sun, Plus, Menu, Network, FileText } from 'lucide-react';
 import { Collapsible, CollapsibleContent } from './components/ui/collapsible';
 import { NavigationMenu, NavigationMenuItem, NavigationMenuList } from './components/ui/navigation-menu';
 import { Button } from './components/ui/button';
-import { Card, CardContent } from './components/ui/card';
-import { Progress } from './components/ui/progress';
 import './App.css';
-import MermaidGraphView from './components/MermaidGraphView';
+import AllTasksPage from './pages/AllTasksPage';
+import RecommendedPage from './pages/RecommendedPage';
+import GraphPage from './pages/GraphPage';
+import OneOffsPage from './pages/OneOffsPage';
+import ReportsPage from './pages/ReportsPage';
 
 function App() {
     const [categories, setCategories] = useState<CategoryWithTodos[]>([]);
@@ -24,13 +25,15 @@ function App() {
     const location = useLocation();
     const navigate = useNavigate();
     const path = location.pathname;
-    const currentTab: 'all' | 'recommended' | 'oneoff' | 'graph' = path.startsWith('/all')
+    const currentTab: 'all' | 'recommended' | 'oneoff' | 'graph' | 'reports' = path.startsWith('/all')
         ? 'all'
         : path.startsWith('/oneoff')
             ? 'oneoff'
             : path.startsWith('/graph')
                 ? 'graph'
-                : 'recommended';
+                : path.startsWith('/reports')
+                    ? 'reports'
+                    : 'recommended';
     const [error, setError] = useState<string | null>(null);
     const [pendingQueue, setPendingQueue] = useState<Array<{ id: number; status: TaskStatus }>>([]);
     const [oneOffs, setOneOffs] = useState<OneOffTodo[]>([]);
@@ -216,7 +219,7 @@ function App() {
     useEffect(() => {
         if (location.pathname === '/') {
             const last = localStorage.getItem('taskin_last_tab');
-            const target = (last === 'all' || last === 'oneoff' || last === 'recommended' || last === 'graph') ? last : 'recommended';
+            const target = (last === 'all' || last === 'oneoff' || last === 'recommended' || last === 'graph' || last === 'reports') ? last : 'recommended';
             navigate(`/${target}`, { replace: true });
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -645,6 +648,13 @@ function App() {
                                     <Network className="w-4 h-4" />
                                     <span>Graph</span>
                                 </button>
+                                <button
+                                    onClick={() => { navigate('/reports'); setNavOpen(false); }}
+                                    className={`w-full justify-center flex items-center gap-2 px-3 py-3 rounded-md border transition-colors ${currentTab === 'reports' ? 'border-primary text-primary' : 'text-foreground hover:bg-accent'} `}
+                                >
+                                    <FileText className="w-4 h-4" />
+                                    <span>Reports</span>
+                                </button>
                             </div>
                         </CollapsibleContent>
                     </Collapsible>
@@ -689,6 +699,15 @@ function App() {
                                         Graph
                                     </button>
                                 </NavigationMenuItem>
+                                <NavigationMenuItem>
+                                    <button
+                                        onClick={() => navigate('/reports')}
+                                        className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-md ${currentTab === 'reports' ? 'bg-accent text-accent-foreground' : 'hover:bg-accent hover:text-accent-foreground'}`}
+                                    >
+                                        <FileText className="w-4 h-4" />
+                                        Reports
+                                    </button>
+                                </NavigationMenuItem>
                             </NavigationMenuList>
                         </NavigationMenu>
                         <button
@@ -712,422 +731,129 @@ function App() {
                 className={mainClasses}
                 style={currentTab === 'graph' ? {} : { WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', paddingBottom: `${footerHeight}px` }}
             >
-                {currentTab === 'all' ? (
-                    <>
-                        <div className="space-y-4">
-                            {/* Summary bar */}
-                            <Card className="bg-background/60">
-                                <CardContent className="pt-6">
-                                    <div className="flex items-center justify-between gap-4 mb-3">
-                                        <div className="text-sm text-muted-foreground">
-                                            Overview
-                                        </div>
-                                        <div className="text-xs text-muted-foreground">
-                                            {summary.complete}/{summary.total} complete
-                                        </div>
-                                    </div>
-                                    <Progress value={summary.percentComplete} />
-                                    <div className="mt-4 grid grid-cols-2 sm:grid-cols-6 gap-3 text-sm">
-                                        <div className="rounded-md border p-3 bg-muted/40">
-                                            <div className="text-muted-foreground text-xs">Total</div>
-                                            <div className="font-medium">{summary.total}</div>
-                                        </div>
-                                        <div className="rounded-md border p-3 bg-muted/40">
-                                            <div className="text-muted-foreground text-xs">Ready now</div>
-                                            <div className="font-medium">{summary.readyNow}</div>
-                                        </div>
-                                        <div className="rounded-md border p-3 bg-muted/40">
-                                            <div className="flex items-center gap-1 text-xs text-muted-foreground"><Check className="w-3 h-3" /> Complete</div>
-                                            <div className="font-medium">{summary.complete}</div>
-                                        </div>
-                                        <div className="rounded-md border p-3 bg-muted/40">
-                                            <div className="flex items-center gap-1 text-xs text-muted-foreground"><CircleDashed className="w-3 h-3" /> In Progress</div>
-                                            <div className="font-medium">{summary.inProgress}</div>
-                                        </div>
-                                        <div className="rounded-md border p-3 bg-muted/40">
-                                            <div className="flex items-center gap-1 text-xs text-muted-foreground"><Circle className="w-3 h-3" /> Incomplete</div>
-                                            <div className="font-medium">{summary.incomplete}</div>
-                                        </div>
-                                        <div className="rounded-md border p-3 bg-muted/40">
-                                            <div className="flex items-center gap-1 text-xs text-muted-foreground"><SkipForward className="w-3 h-3" /> Skipped</div>
-                                            <div className="font-medium">{summary.skipped}</div>
-                                        </div>
-
-                                    </div>
-                                </CardContent>
-                            </Card>
-                            {categories.length === 0 ? (
-                                <div className="text-center py-12 text-muted-foreground">
-                                    No categories found
-                                </div>
-                            ) : (
-                                categories.map(category => (
-                                    <CategoryCard
-                                        key={category.id}
-                                        category={category}
-                                        onStatusChange={handleStatusChange}
-                                    />
-                                ))
-                            )}
-                        </div>
-                    </>
-                ) : currentTab === 'recommended' ? (
-                    <div className="bg-background rounded-lg border shadow-sm p-6">
-                        <p className="text-sm text-muted-foreground text-center mb-6">
-                            Tasks ready to work on (all dependencies satisfied)
-                        </p>
-                        {recommendedTodos.length === 0 ? (
-                            <div className="text-center py-12">
-                                <p className="text-2xl mb-2">🎉</p>
-                                <p className="font-medium mb-1">No tasks available!</p>
-                                <p className="text-sm text-muted-foreground">
-                                    Either complete all dependencies or all tasks are done.
-                                </p>
-                            </div>
-                        ) : (
-                            <div className="space-y-3">
-                                {recommendedTodos.map(todo => {
-                                    const statuses: ('incomplete' | 'in-progress' | 'complete' | 'skipped')[] = ['incomplete', 'in-progress', 'complete', 'skipped'];
-                                    return (
-                                        <div
-                                            key={todo.id}
-                                            className="p-4 bg-muted/50 rounded-lg border"
-                                        >
-                                            <div className="flex items-start gap-2 mb-2">
-                                                <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-primary text-primary-foreground">
-                                                    {todo.category.name}
-                                                </span>
-                                                <h4 className="font-medium flex-1 flex items-center gap-2">
-                                                    {todo.title}
-                                                    <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-md bg-background/40 text-muted-foreground">{todo.status === 'in-progress' ? 'In Progress' : todo.status === 'complete' ? 'Complete' : todo.status === 'skipped' ? 'Skipped' : 'Incomplete'}</span>
-                                                </h4>
-                                                <div className="ml-2 mt-1">
-                                                    <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: todo.status === 'complete' ? '#22c55e' : todo.status === 'in-progress' ? '#3b82f6' : todo.status === 'skipped' ? '#f97316' : '#64748b' }} title={todo.status} />
-                                                </div>
-                                            </div>
-                                            {todo.description && (
-                                                <p className="text-sm text-muted-foreground mb-3">
-                                                    {todo.description}
-                                                </p>
-                                            )}
-                                            <div className="flex flex-wrap gap-2">
-                                                {statuses.filter(s => s !== todo.status).map(s => {
-                                                    if (s === 'incomplete') {
-                                                        return (
-                                                            <Button key={s} size="sm" variant={s === todo.status ? 'default' : 'outline'} onClick={() => handleStatusChange(todo.id, 'incomplete')} aria-label="Mark as incomplete"><Circle className="w-4 h-4 sm:mr-2 shrink-0" /><span className="hidden sm:inline">Incomplete</span></Button>
-                                                        );
-                                                    }
-                                                    if (s === 'in-progress') {
-                                                        return (
-                                                            <Button key={s} size="sm" variant={s === todo.status ? 'default' : 'outline'} onClick={() => handleStatusChange(todo.id, 'in-progress')} aria-label="Mark as in progress"><CircleDashed className="w-4 h-4 sm:mr-2 shrink-0" /><span className="hidden sm:inline">In Progress</span></Button>
-                                                        );
-                                                    }
-                                                    if (s === 'complete') {
-                                                        return (
-                                                            <Button key={s} size="sm" variant={s === todo.status ? 'default' : 'outline'} onClick={() => handleStatusChange(todo.id, 'complete')} aria-label="Mark as complete"><Check className="w-4 h-4 sm:mr-2 shrink-0" /><span className="hidden sm:inline">Complete</span></Button>
-                                                        );
-                                                    }
-                                                    return (
-                                                        <Button key={s} size="sm" variant={s === todo.status ? 'default' : 'outline'} onClick={() => handleStatusChange(todo.id, 'skipped')} aria-label="Mark as skipped"><SkipForward className="w-4 h-4 sm:mr-2 shrink-0" /><span className="hidden sm:inline">Skip</span></Button>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    )
-                                })}
-                            </div>
-                        )}
-                    </div>
-                ) : currentTab === 'graph' ? (
-                    <MermaidGraphView />
-                ) : (
-                    <div className="bg-background rounded-lg border shadow-sm p-6">
-                        <div className="mb-4 grid gap-2 sm:grid-cols-[1fr_auto]">
-                            <div className="grid gap-2 sm:grid-cols-2">
-                                <input
-                                    className="w-full rounded-md border px-3 py-2 bg-background"
-                                    placeholder="Title"
-                                    value={newOneTitle}
-                                    onChange={e => setNewOneTitle(e.target.value)}
-                                />
-                                <textarea
-                                    className="w-full rounded-md border px-3 py-2 bg-background resize-y min-h-[80px]"
-                                    placeholder="Description (optional)"
-                                    value={newOneDesc}
-                                    onChange={e => setNewOneDesc(e.target.value)}
-                                    rows={3}
-                                />
-                            </div>
-                            <Button
-                                onClick={async () => {
-                                    const title = newOneTitle.trim();
-                                    if (!title) return;
-                                    const description = newOneDesc.trim() || undefined;
-                                    const canSync = navigator.onLine && serverOnline;
-                                    // Create optimistic local item with a temporary negative ID
-                                    const tempId = -Date.now();
-                                    const optimistic: OneOffTodo = { id: tempId, title, description: description ?? null, status: 'incomplete' };
+                <Routes>
+                    <Route path="/all" element={<AllTasksPage categories={categories} summary={summary as any} onStatusChange={handleStatusChange} />} />
+                    <Route path="/recommended" element={<RecommendedPage todos={recommendedTodos} onStatusChange={handleStatusChange} />} />
+                    <Route path="/graph" element={<GraphPage />} />
+                    <Route path="/reports" element={<ReportsPage />} />
+                    <Route path="/oneoff" element={<OneOffsPage
+                        oneOffs={oneOffs}
+                        sortedOneOffs={sortedOneOffs}
+                        newOneTitle={newOneTitle}
+                        newOneDesc={newOneDesc}
+                        setNewOneTitle={setNewOneTitle}
+                        setNewOneDesc={setNewOneDesc}
+                        editingId={editingId}
+                        editTitle={editTitle}
+                        editDesc={editDesc}
+                        setEditTitle={setEditTitle}
+                        setEditDesc={setEditDesc}
+                        onCreate={async () => {
+                            const title = newOneTitle.trim();
+                            if (!title) return;
+                            const description = newOneDesc.trim() || undefined;
+                            const canSync = navigator.onLine && serverOnline;
+                            const tempId = -Date.now();
+                            const optimistic: OneOffTodo = { id: tempId, title, description: description ?? null, status: 'incomplete' };
+                            setOneOffs(prev => {
+                                const list = [optimistic, ...prev];
+                                try { localStorage.setItem(LS_ONEOFFS, JSON.stringify(list)); } catch { }
+                                return list;
+                            });
+                            setNewOneTitle(''); setNewOneDesc('');
+                            try {
+                                if (canSync) {
+                                    const created = await api.createOneOffTodo({ title, description });
                                     setOneOffs(prev => {
-                                        const list = [optimistic, ...prev];
+                                        const list = prev.map(o => o.id === tempId ? created : o);
                                         try { localStorage.setItem(LS_ONEOFFS, JSON.stringify(list)); } catch { }
                                         return list;
                                     });
-                                    setNewOneTitle(''); setNewOneDesc('');
-                                    try {
-                                        if (canSync) {
-                                            const created = await api.createOneOffTodo({ title, description });
-                                            // Replace temp item with real one
-                                            setOneOffs(prev => {
-                                                const list = prev.map(o => o.id === tempId ? created : o);
-                                                try { localStorage.setItem(LS_ONEOFFS, JSON.stringify(list)); } catch { }
-                                                return list;
-                                            });
-                                            // Remap any queued ops from tempId to real id just in case
-                                            setOneOffPending(prev => {
-                                                const remapped = prev.map(op => {
-                                                    if (op.kind === 'status' || op.kind === 'update' || op.kind === 'delete') {
-                                                        if (op.id === tempId) return { ...op, id: created.id } as OneOffOp;
-                                                    } else if (op.kind === 'create' && op.clientId === tempId) {
-                                                        // Drop create for this temp, already created
-                                                        return { kind: 'update', id: created.id, title, description } as OneOffOp;
-                                                    }
-                                                    return op;
-                                                }).filter(op => !(op.kind === 'create' && op.clientId === tempId));
-                                                const compact = compressOneOffOps(remapped);
-                                                saveOneOffPending(compact);
-                                                return compact;
-                                            });
-                                        } else {
-                                            // Queue create for later
-                                            setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'create' as const, clientId: tempId, title, description, status: 'incomplete' as TaskStatus }]); saveOneOffPending(next); return next; });
-                                        }
-                                    } catch (e) {
-                                        // If online create failed, fall back to queueing the create
-                                        setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'create' as const, clientId: tempId, title, description, status: 'incomplete' as TaskStatus }]); saveOneOffPending(next); return next; });
-                                    }
-                                }}
-                                className="flex items-center gap-2"
-                                variant="outline"
-                            >
-                                <Plus className="w-4 h-4" /> Add
-                            </Button>
-                        </div>
-                        {oneOffs.length === 0 ? (
-                            <div className="text-center py-12 text-muted-foreground">No one-off todos</div>
-                        ) : (
-                            <div className="space-y-3">
-                                {sortedOneOffs.map(item => (
-                                    <div key={item.id} className="p-4 bg-muted/50 rounded-lg border">
-                                        {/* Header row: title/desc (or inputs) on left, edit/delete on right */}
-                                        <div className="flex items-start gap-3">
-                                            <div className="flex-1">
-                                                {editingId === item.id ? (
-                                                    <div className="grid gap-2 sm:grid-cols-2">
-                                                        <textarea
-                                                            className="w-full rounded-md border px-3 py-2 bg-background resize-y min-h-[60px]"
-                                                            placeholder="Title"
-                                                            value={editTitle}
-                                                            onChange={e => setEditTitle(e.target.value)}
-                                                            rows={2}
-                                                        />
-                                                        <textarea
-                                                            className="w-full rounded-md border px-3 py-2 bg-background resize-y min-h-[80px]"
-                                                            placeholder="Description (optional)"
-                                                            value={editDesc}
-                                                            onChange={e => setEditDesc(e.target.value)}
-                                                            rows={3}
-                                                        />
-                                                    </div>
-                                                ) : (
-                                                    <>
-                                                        <h4 className="font-medium flex items-center gap-2">
-                                                            {item.title}
-                                                            <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-md bg-background/40 text-muted-foreground">{item.status === 'in-progress' ? 'In Progress' : item.status === 'complete' ? 'Complete' : 'Incomplete'}</span>
-                                                            <span className="ml-1 inline-block w-2.5 h-2.5 rounded-full" style={{ background: item.status === 'complete' ? '#22c55e' : item.status === 'in-progress' ? '#3b82f6' : '#64748b' }} />
-                                                        </h4>
-                                                        {item.description && (
-                                                            <p className="text-sm text-muted-foreground">{item.description}</p>
-                                                        )}
-                                                    </>
-                                                )}
-                                            </div>
-                                            <div className="flex flex-wrap gap-2">
-                                                {editingId === item.id ? (
-                                                    <>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            className="flex items-center gap-2"
-                                                            onClick={async () => {
-                                                                const title = editTitle.trim();
-                                                                if (!title) { alert('Title is required'); return; }
-                                                                const description = editDesc.trim() || null;
-                                                                // Optimistic local update
-                                                                setOneOffs(prev => {
-                                                                    const list = prev.map(o => o.id === item.id ? { ...o, title, description } : o);
-                                                                    try { localStorage.setItem(LS_ONEOFFS, JSON.stringify(list)); } catch { }
-                                                                    return list;
-                                                                });
-                                                                const canSync = navigator.onLine && serverOnline;
-                                                                try {
-                                                                    if (canSync) {
-                                                                        await api.updateOneOffTodo(item.id, { title, description });
-                                                                    } else {
-                                                                        setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'update' as const, id: item.id, title, description }]); saveOneOffPending(next); return next; });
-                                                                    }
-                                                                } catch (e) {
-                                                                    setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'update' as const, id: item.id, title, description }]); saveOneOffPending(next); return next; });
-                                                                }
-                                                                setEditingId(null);
-                                                                setEditTitle('');
-                                                                setEditDesc('');
-                                                            }}
-                                                        >
-                                                            <Check className="w-4 h-4" />
-                                                            <span className="hidden sm:inline">Save</span>
-                                                        </Button>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            className="flex items-center gap-2"
-                                                            onClick={() => { setEditingId(null); setEditTitle(''); setEditDesc(''); }}
-                                                        >
-                                                            <X className="w-4 h-4" />
-                                                            <span className="hidden sm:inline">Cancel</span>
-                                                        </Button>
-                                                    </>
-                                                ) : (
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="flex items-center gap-2"
-                                                        onClick={() => { setEditingId(item.id); setEditTitle(item.title); setEditDesc(item.description || ''); }}
-                                                    >
-                                                        <Pencil className="w-4 h-4" />
-                                                        <span className="hidden sm:inline">Edit</span>
-                                                    </Button>
-                                                )}
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={async () => {
-                                                        if (!confirm('Delete this one-off?')) return;
-                                                        // Optimistic local delete
-                                                        setOneOffs(prev => {
-                                                            const list = prev.filter(o => o.id !== item.id);
-                                                            try { localStorage.setItem(LS_ONEOFFS, JSON.stringify(list)); } catch { }
-                                                            return list;
-                                                        });
-                                                        // If this is a temp item (negative id), just cancel the queued create and exit
-                                                        if (item.id < 0) {
-                                                            setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'delete' as const, id: item.id }]); saveOneOffPending(next); return next; });
-                                                            return;
-                                                        }
-                                                        const canSync = navigator.onLine && serverOnline;
-                                                        try {
-                                                            if (canSync) await api.deleteOneOffTodo(item.id);
-                                                            else {
-                                                                setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'delete' as const, id: item.id }]); saveOneOffPending(next); return next; });
-                                                            }
-                                                        } catch (e) {
-                                                            setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'delete' as const, id: item.id }]); saveOneOffPending(next); return next; });
-                                                        }
-                                                    }}
-                                                    className="flex items-center gap-2"
-                                                >
-                                                    <Trash className="w-4 h-4" />
-                                                    <span className="hidden sm:inline">Delete</span>
-                                                </Button>
-                                            </div>
-                                        </div>
-                                        {/* Status buttons row below title/description */}
-                                        <div className="mt-3 flex flex-wrap gap-2">
-                                            {(['incomplete', 'in-progress', 'complete', 'skipped'] as const).filter(s => s !== item.status).map(s => {
-                                                const disabled = editingId === item.id;
-                                                if (s === 'incomplete') return (
-                                                    <Button key={s} size="sm" variant={s === item.status ? 'default' : 'outline'} onClick={async () => {
-                                                        // Optimistic update
-                                                        setOneOffs(prev => {
-                                                            const list = prev.map(o => o.id === item.id ? { ...o, status: 'incomplete' as TaskStatus } : o);
-                                                            try { localStorage.setItem(LS_ONEOFFS, JSON.stringify(list)); } catch { }
-                                                            return list;
-                                                        });
-                                                        const canSync = navigator.onLine && serverOnline;
-                                                        try {
-                                                            if (canSync) await api.updateOneOffStatus(item.id, 'incomplete');
-                                                            else {
-                                                                setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'status' as const, id: item.id, status: 'incomplete' as TaskStatus }]); saveOneOffPending(next); return next; });
-                                                            }
-                                                        } catch (e) {
-                                                            setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'status' as const, id: item.id, status: 'incomplete' as TaskStatus }]); saveOneOffPending(next); return next; });
-                                                        }
-                                                    }} disabled={disabled} aria-label="Mark as incomplete"><Circle className="w-4 h-4 sm:mr-2 shrink-0" /><span className="hidden sm:inline">Incomplete</span></Button>
-                                                )
-                                                if (s === 'in-progress') return (
-                                                    <Button key={s} size="sm" variant={s === item.status ? 'default' : 'outline'} onClick={async () => {
-                                                        // Optimistic update
-                                                        setOneOffs(prev => {
-                                                            const list = prev.map(o => o.id === item.id ? { ...o, status: 'in-progress' as TaskStatus } : o);
-                                                            try { localStorage.setItem(LS_ONEOFFS, JSON.stringify(list)); } catch { }
-                                                            return list;
-                                                        });
-                                                        const canSync = navigator.onLine && serverOnline;
-                                                        try {
-                                                            if (canSync) await api.updateOneOffStatus(item.id, 'in-progress');
-                                                            else {
-                                                                setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'status' as const, id: item.id, status: 'in-progress' as TaskStatus }]); saveOneOffPending(next); return next; });
-                                                            }
-                                                        } catch (e) {
-                                                            setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'status' as const, id: item.id, status: 'in-progress' as TaskStatus }]); saveOneOffPending(next); return next; });
-                                                        }
-                                                    }} disabled={disabled} aria-label="Mark as in progress"><CircleDashed className="w-4 h-4 sm:mr-2 shrink-0" /><span className="hidden sm:inline">In Progress</span></Button>
-                                                )
-                                                if (s === 'complete') return (
-                                                    <Button key={s} size="sm" variant={s === item.status ? 'default' : 'outline'} onClick={async () => {
-                                                        // Optimistic update
-                                                        setOneOffs(prev => {
-                                                            const list = prev.map(o => o.id === item.id ? { ...o, status: 'complete' as TaskStatus } : o);
-                                                            try { localStorage.setItem(LS_ONEOFFS, JSON.stringify(list)); } catch { }
-                                                            return list;
-                                                        });
-                                                        const canSync = navigator.onLine && serverOnline;
-                                                        try {
-                                                            if (canSync) await api.updateOneOffStatus(item.id, 'complete');
-                                                            else {
-                                                                setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'status' as const, id: item.id, status: 'complete' as TaskStatus }]); saveOneOffPending(next); return next; });
-                                                            }
-                                                        } catch (e) {
-                                                            setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'status' as const, id: item.id, status: 'complete' as TaskStatus }]); saveOneOffPending(next); return next; });
-                                                        }
-                                                    }} disabled={disabled} aria-label="Mark as complete"><Check className="w-4 h-4 sm:mr-2 shrink-0" /><span className="hidden sm:inline">Complete</span></Button>
-                                                )
-                                                return (
-                                                    <Button key={s} size="sm" variant={s === item.status ? 'default' : 'outline'} onClick={async () => {
-                                                        // Optimistic update
-                                                        setOneOffs(prev => {
-                                                            const list = prev.map(o => o.id === item.id ? { ...o, status: 'skipped' as TaskStatus } : o);
-                                                            try { localStorage.setItem(LS_ONEOFFS, JSON.stringify(list)); } catch { }
-                                                            return list;
-                                                        });
-                                                        const canSync = navigator.onLine && serverOnline;
-                                                        try {
-                                                            if (canSync) await api.updateOneOffStatus(item.id, 'skipped');
-                                                            else {
-                                                                setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'status' as const, id: item.id, status: 'skipped' as TaskStatus }]); saveOneOffPending(next); return next; });
-                                                            }
-                                                        } catch (e) {
-                                                            setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'status' as const, id: item.id, status: 'skipped' as TaskStatus }]); saveOneOffPending(next); return next; });
-                                                        }
-                                                    }} disabled={disabled} aria-label="Mark as skipped"><SkipForward className="w-4 h-4 sm:mr-2 shrink-0" /><span className="hidden sm:inline">Skip</span></Button>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                )}
+                                    setOneOffPending(prev => {
+                                        const remapped = prev.map(op => {
+                                            if (op.kind === 'status' || op.kind === 'update' || op.kind === 'delete') {
+                                                if (op.id === tempId) return { ...op, id: created.id } as OneOffOp;
+                                            } else if (op.kind === 'create' && op.clientId === tempId) {
+                                                return { kind: 'update', id: created.id, title, description } as OneOffOp;
+                                            }
+                                            return op;
+                                        }).filter(op => !(op.kind === 'create' && op.clientId === tempId));
+                                        const compact = compressOneOffOps(remapped);
+                                        saveOneOffPending(compact);
+                                        return compact;
+                                    });
+                                } else {
+                                    setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'create' as const, clientId: tempId, title, description, status: 'incomplete' as TaskStatus }]); saveOneOffPending(next); return next; });
+                                }
+                            } catch (e) {
+                                setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'create' as const, clientId: tempId, title, description, status: 'incomplete' as TaskStatus }]); saveOneOffPending(next); return next; });
+                            }
+                        }}
+                        onStartEdit={(item) => { setEditingId(item.id); setEditTitle(item.title); setEditDesc(item.description || ''); }}
+                        onCancelEdit={() => { setEditingId(null); setEditTitle(''); setEditDesc(''); }}
+                        onSaveEdit={async (id) => {
+                            const title = editTitle.trim();
+                            if (!title) { alert('Title is required'); return; }
+                            const description = editDesc.trim() || null;
+                            setOneOffs(prev => {
+                                const list = prev.map(o => o.id === id ? { ...o, title, description } : o);
+                                try { localStorage.setItem(LS_ONEOFFS, JSON.stringify(list)); } catch { }
+                                return list;
+                            });
+                            const canSync = navigator.onLine && serverOnline;
+                            try {
+                                if (canSync) {
+                                    await api.updateOneOffTodo(id, { title, description });
+                                } else {
+                                    setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'update' as const, id, title, description }]); saveOneOffPending(next); return next; });
+                                }
+                            } catch (e) {
+                                setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'update' as const, id, title, description }]); saveOneOffPending(next); return next; });
+                            }
+                            setEditingId(null); setEditTitle(''); setEditDesc('');
+                        }}
+                        onDelete={async (id) => {
+                            if (!confirm('Delete this one-off?')) return;
+                            setOneOffs(prev => {
+                                const list = prev.filter(o => o.id !== id);
+                                try { localStorage.setItem(LS_ONEOFFS, JSON.stringify(list)); } catch { }
+                                return list;
+                            });
+                            if (id < 0) {
+                                setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'delete' as const, id }]); saveOneOffPending(next); return next; });
+                                return;
+                            }
+                            const canSync = navigator.onLine && serverOnline;
+                            try {
+                                if (canSync) await api.deleteOneOffTodo(id);
+                                else {
+                                    setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'delete' as const, id }]); saveOneOffPending(next); return next; });
+                                }
+                            } catch (e) {
+                                setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'delete' as const, id }]); saveOneOffPending(next); return next; });
+                            }
+                        }}
+                        onStatusChange={async (id, status) => {
+                            // Optimistic update
+                            setOneOffs(prev => {
+                                const list = prev.map(o => o.id === id ? { ...o, status } : o);
+                                try { localStorage.setItem(LS_ONEOFFS, JSON.stringify(list)); } catch { }
+                                return list;
+                            });
+                            const canSync = navigator.onLine && serverOnline;
+                            try {
+                                if (canSync) await api.updateOneOffStatus(id, status);
+                                else {
+                                    setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'status' as const, id, status }]); saveOneOffPending(next); return next; });
+                                }
+                            } catch (e) {
+                                setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'status' as const, id, status }]); saveOneOffPending(next); return next; });
+                            }
+                        }}
+                    />}
+                    />
+                    <Route path="*" element={<Navigate to="/recommended" replace />} />
+                </Routes>
             </main>
             {/* Fixed footer (permanent bottom bar) with controls and indicators */}
             <footer

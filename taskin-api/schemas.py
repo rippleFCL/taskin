@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List
+from datetime import datetime
 from models import TaskStatus
 
 
@@ -95,3 +96,55 @@ class DependencyGraph(BaseModel):
     edges: List[DependencyEdge]
     categories: List[CategoryResponse]
     oneoff_count: int
+
+
+# Statistics/Report schemas
+class TaskReportResponse(ORMModel):
+    """Schema for individual task report in a reset cycle"""
+
+    id: int
+    todo_id: int
+    todo_title: str
+    category_name: str
+    final_status: TaskStatus
+    in_progress_duration_seconds: Optional[float]
+
+
+class ResetReportResponse(ORMModel):
+    """Schema for reset report summary"""
+
+    id: int
+    created_at: datetime
+    total_todos: int
+    completed_todos: int
+    skipped_todos: int
+    incomplete_todos: int
+    task_reports: List[TaskReportResponse] = Field(default_factory=list)
+
+
+class TaskStatistics(BaseModel):
+    """Aggregated statistics for a specific task across multiple reports"""
+
+    todo_id: int
+    todo_title: str
+    category_name: str
+
+    # Metrics
+    completion_rate: float  # Percentage of reports where task was completed (0-100)
+    skip_rate: float  # Percentage of reports where task was skipped (0-100)
+    avg_in_progress_duration_seconds: Optional[float]  # Average time spent in-progress when it was used
+
+    # Raw counts
+    total_appearances: int
+    times_completed: int
+    times_skipped: int
+    times_incomplete: int
+
+    tot_in_progress_duration_seconds: float  # Total time spent in-progress across all reports
+
+
+class AggregatedStatistics(BaseModel):
+    """Overall aggregated statistics across all tasks and reports"""
+
+    report_count: int  # Number of reports analyzed
+    task_statistics: List[TaskStatistics]  # Per-task breakdown
