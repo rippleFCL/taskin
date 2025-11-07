@@ -37,30 +37,19 @@ export interface OneOffTodo {
 export interface DependencyNode {
   id: number;
   title: string;
-  category?: string | null;
-  status?: TaskStatus | null;
-  reset_interval?: number | null;
-  node_type: 'todo' | 'category' | 'special';
+  // Node type provided by API (see OpenAPI). Supported values include:
+  // 'todo' | 'category' | 'oneoff' | 'control'
+  node_type: 'todo' | 'category' | 'oneoff' | 'control' | (string & {});
 }
 
-export type DependencyType = 'todo' | 'category' | 'category_member' | 'all_oneoffs' | 'special';
-
 export interface DependencyEdge {
-  from_todo_id: number;
-  from_todo_title: string;
-  to_todo_id?: number | null;
-  to_todo_title?: string | null;
-  to_category_id?: number | null;
-  to_category_name?: string | null;
-  depends_on_all_oneoffs?: boolean;
-  dependency_type: DependencyType;
+  from_node_id: number;
+  to_node_id: number;
 }
 
 export interface DependencyGraph {
   nodes: DependencyNode[];
   edges: DependencyEdge[];
-  categories: Category[];
-  oneoff_count: number;
 }
 
 // Reports types

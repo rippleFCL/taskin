@@ -55,62 +55,58 @@ export default function MermaidGraphView() {
 
         // Track node IDs for styling by type
         const categoryNodeIds: string[] = [];
-        const wakeupNodeIds: string[] = [];
-        const sleepNodeIds: string[] = [];
+        const todoNodeIds: string[] = [];
+        const oneoffNodeIds: string[] = [];
+        const controlNodeIds: string[] = [];
 
-        // Define nodes (todos, categories, specials)
+        // Define nodes based on node_type from API
         for (const n of graph.nodes) {
             const nid = nodeIdTodo(n.id);
             const label = esc(n.title);
 
-            if (n.node_type === 'category') {
-                // Smaller rounded-rectangle for category nodes (keep green color)
-                lines.push(`${nid}(\"${n.title}\")`);
-                categoryNodeIds.push(nid);
-            } else if (n.node_type === 'special') {
-                // Use subroutine shape for special nodes
-                lines.push(`${nid}[["${label}"]]`);
-                if (/wakeup/i.test(n.title)) wakeupNodeIds.push(nid);
-                else if (/sleep/i.test(n.title)) sleepNodeIds.push(nid);
-            } else {
-                // Regular box for todo nodes
-                lines.push(`${nid}["${label}"]`);
+            switch (n.node_type) {
+                case 'category':
+                    // Rounded rect for categories
+                    lines.push(`${nid}("${label}")`);
+                    categoryNodeIds.push(nid);
+                    break;
+                case 'oneoff':
+                    // Stadium shape for one-offs
+                    lines.push(`${nid}(["${label}"])`);
+                    oneoffNodeIds.push(nid);
+                    break;
+                case 'control':
+                    // Subroutine for control nodes (e.g., Wake up)
+                    lines.push(`${nid}[["${label}"]]`);
+                    controlNodeIds.push(nid);
+                    break;
+                case 'todo':
+                default:
+                    lines.push(`${nid}["${label}"]`);
+                    todoNodeIds.push(nid);
+                    break;
             }
         }
 
-        // Optional special node for all one-offs
-        if ((graph.edges || []).some(e => e.dependency_type === 'all_oneoffs')) {
-            lines.push(`oneoffs_all(("All One-offs"))`);
-            // style distinct color
-            lines.push('classDef oneoffs fill:#f59e0b,stroke:#111,color:#111');
-            lines.push('class oneoffs_all oneoffs;');
-        }
-
-        // Style category nodes with distinct color
+        // Styles
         if (categoryNodeIds.length > 0) {
-            lines.push('classDef category fill:#10b981,stroke:#111,color:#111');
+            lines.push('classDef category fill:#10b981,stroke:#0b3b2e,color:#0b3b2e');
             lines.push(`class ${categoryNodeIds.join(',')} category;`);
         }
-
-        // Style special nodes
-        if (wakeupNodeIds.length > 0) {
-            lines.push('classDef wakeup fill:#60a5fa,stroke:#111,color:#111');
-            lines.push(`class ${wakeupNodeIds.join(',')} wakeup;`);
+        if (oneoffNodeIds.length > 0) {
+            lines.push('classDef oneoff fill:#f59e0b,stroke:#7c3d00,color:#111');
+            lines.push(`class ${oneoffNodeIds.join(',')} oneoff;`);
         }
-        if (sleepNodeIds.length > 0) {
-            lines.push('classDef sleep fill:#64748b,stroke:#111,color:#fff');
-            lines.push(`class ${sleepNodeIds.join(',')} sleep;`);
+        if (controlNodeIds.length > 0) {
+            lines.push('classDef control fill:#60a5fa,stroke:#1e3a8a,color:#111');
+            lines.push(`class ${controlNodeIds.join(',')} control;`);
         }
 
-        // Edges: prerequisite --> dependent
+        // Edges: prerequisite --> dependent using from_node_id -> to_node_id
         for (const e of graph.edges) {
-            const depId = nodeIdTodo(e.from_todo_id); // dependent
-            if (e.dependency_type === 'all_oneoffs') {
-                lines.push(`oneoffs_all --> ${depId}`);
-            } else if (e.to_todo_id != null) {
-                const preId = nodeIdTodo(e.to_todo_id);
-                lines.push(`${preId} --> ${depId}`);
-            }
+            const fromId = nodeIdTodo(e.from_node_id);
+            const toId = nodeIdTodo(e.to_node_id);
+            lines.push(`${fromId} --> ${toId}`);
         }
 
         // Basic styling for readability
@@ -265,7 +261,6 @@ export default function MermaidGraphView() {
             <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground p-4 bg-background/60 border-b">
                 <span>Nodes: <strong>{graph?.nodes.length ?? 0}</strong></span>
                 <span>Edges: <strong>{graph?.edges.length ?? 0}</strong></span>
-                <span>One-offs: <strong>{graph?.oneoff_count ?? 0}</strong></span>
                 <div className="ml-auto flex items-center gap-2">
                     <button
                         onClick={() => panZoomRef.current?.zoomIn()}

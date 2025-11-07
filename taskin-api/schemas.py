@@ -1,3 +1,4 @@
+from enum import Enum
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List
 from datetime import datetime
@@ -65,6 +66,11 @@ class OneOffTodoResponse(ORMModel):
     description: Optional[str]
     status: TaskStatus
 
+class NodeType(Enum):
+    todo = "todo"
+    category = "category"
+    oneoff = "oneoff"
+    control = "control"
 
 # Dependency graph schemas
 class DependencyNode(BaseModel):
@@ -72,21 +78,14 @@ class DependencyNode(BaseModel):
 
     id: int
     title: str
-    category: Optional[str] = None  # Only for todo nodes
-    status: Optional[TaskStatus] = None  # Only for todo nodes
-    reset_interval: Optional[int] = None  # Only for todo nodes
-    node_type: str = "todo"  # "todo" or "category"
+    node_type: NodeType
 
 
 class DependencyEdge(BaseModel):
     """An edge in the dependency graph representing a dependency relationship"""
 
-    from_todo_id: int
-    from_todo_title: str
-    to_todo_id: Optional[int] = None
-    to_todo_title: Optional[str] = None
-    depends_on_all_oneoffs: bool = False
-    dependency_type: str  # "todo", "category", or "all_oneoffs"
+    from_node_id: int
+    to_node_id: int
 
 
 class DependencyGraph(BaseModel):
@@ -94,8 +93,6 @@ class DependencyGraph(BaseModel):
 
     nodes: List[DependencyNode]
     edges: List[DependencyEdge]
-    categories: List[CategoryResponse]
-    oneoff_count: int
 
 
 # Statistics/Report schemas

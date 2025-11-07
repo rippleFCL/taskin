@@ -138,7 +138,6 @@ class OneOffTodoDependency(Base):
     __tablename__ = "oneoff_todo_dependencies"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-
     # Explicit dependency types (only one should be set)
     depends_on_todo_id: Mapped[Optional[int]] = mapped_column(ForeignKey("todos.id", ondelete="CASCADE"), nullable=True)
     depends_on_category_id: Mapped[Optional[int]] = mapped_column(
