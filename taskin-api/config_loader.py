@@ -19,11 +19,14 @@ class CategoryConfig(BaseModel):
     description: Optional[str] = None
     todos: List[TodoConfig] = Field(default_factory=list)
 
+class OneOffTodoConfig(BaseModel):
+    depends_on_todos: List[str] = Field(default_factory=list)
+    depends_on_categories: List[str] = Field(default_factory=list)
 
 class AppConfig(BaseModel):
     webhook_url: Optional[HttpUrl] = None
     categories: List[CategoryConfig] = Field(default_factory=list)
-
+    oneoff_todos: OneOffTodoConfig = Field(default_factory=OneOffTodoConfig)
 
 CONFIG: Optional[AppConfig] = None
 _CONFIG_PATH: str = "config.yml"

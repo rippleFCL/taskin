@@ -1,6 +1,7 @@
 import { Todo, TaskStatus } from '../types';
+import { useEffect, useState } from 'react';
 import { Button } from './ui/button';
-import { Check, Circle, CircleDashed, SkipForward } from 'lucide-react';
+import { Check, Circle, CircleDashed, SkipForward, Clock } from 'lucide-react';
 import { Badge } from './ui/badge';
 
 interface TodoItemProps {
@@ -42,6 +43,47 @@ export function TodoItem({ todo, onStatusChange }: TodoItemProps) {
 
     const statuses: TaskStatus[] = ['incomplete', 'in-progress', 'complete', 'skipped'];
 
+    // Live ticking of in-progress time
+    const initialSeconds =
+        typeof todo.in_progress === 'number'
+            ? Number.isFinite(todo.in_progress) ? Math.max(0, Math.floor(todo.in_progress)) : 0
+            : typeof (todo as any).cumulative_in_progress_seconds === 'number'
+                ? Math.max(0, Math.floor((todo as any).cumulative_in_progress_seconds as number))
+                : 0;
+    const [displaySeconds, setDisplaySeconds] = useState<number>(initialSeconds);
+
+    // Sync from server-provided value when it changes
+    useEffect(() => {
+        const nextSeconds =
+            typeof todo.in_progress === 'number'
+                ? Number.isFinite(todo.in_progress) ? Math.max(0, Math.floor(todo.in_progress)) : 0
+                : typeof (todo as any).cumulative_in_progress_seconds === 'number'
+                    ? Math.max(0, Math.floor((todo as any).cumulative_in_progress_seconds as number))
+                    : 0;
+        setDisplaySeconds(nextSeconds);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [todo.id, todo.in_progress, (todo as any).cumulative_in_progress_seconds]);
+
+    // Increment each second while in-progress
+    useEffect(() => {
+        if (todo.status !== 'in-progress') return;
+        const timer = setInterval(() => {
+            setDisplaySeconds((s) => s + 1);
+        }, 1000);
+        return () => clearInterval(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [todo.id, todo.status]);
+
+    const formatDuration = (seconds: number) => {
+        if (!seconds || seconds <= 0) return '0s';
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = Math.floor(seconds % 60);
+        if (h > 0) return `${h}h ${m}m`;
+        if (m > 0) return `${m}m ${s}s`;
+        return `${s}s`;
+    };
+
     return (
         <div className="py-4">
             <div className="mb-2 flex items-start justify-between gap-3">
@@ -60,7 +102,9 @@ export function TodoItem({ todo, onStatusChange }: TodoItemProps) {
                 </div>
             </div>
 
-            <div className="flex flex-wrap gap-2 mb-2">
+            {/* Action buttons and in-progress time */}
+            <div className="flex flex-wrap items-center gap-3 mb-2">
+                {/* Actions */}
                 {statuses.filter(s => s !== todo.status).map(s => {
                     if (s === 'incomplete') {
                         return (
@@ -113,6 +157,12 @@ export function TodoItem({ todo, onStatusChange }: TodoItemProps) {
                         </Button>
                     );
                 })}
+                {(displaySeconds > 0 || todo.status === 'in-progress') && (
+                    <div className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {formatDuration(displaySeconds)}
+                    </div>
+                )}
             </div>
 
             {/* Keep an accessible textual label for screen-readers and smaller screens */}

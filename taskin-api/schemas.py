@@ -29,7 +29,7 @@ class TodoResponse(ORMModel):
     reset_interval: int = 1
     reset_count: int = 0
     position: int = 0
-
+    cumulative_in_progress_seconds: float = 0
 
 class CategoryWithTodos(CategoryResponse):
     """Schema for category with todos"""

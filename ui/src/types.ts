@@ -12,6 +12,10 @@ export interface Todo {
   description: string | null;
   status: TaskStatus;
   category_id: number;
+  // Total seconds spent in-progress (current cycle); provided by API
+  in_progress: number;
+  // Backend currently exposes this field; keep for compatibility/fallback
+  cumulative_in_progress_seconds?: number;
 }
 
 export interface TodoWithCategory extends Todo {
