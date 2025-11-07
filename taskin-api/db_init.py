@@ -127,6 +127,7 @@ def sync_dependencies(db: Session, config: AppConfig):
     # Clear existing dependencies
     db.query(TodoDependency).delete()
     db.query(TodoDependencyComputed).delete()
+    db.query(OneOffTodoDependency).delete()
     db.query(OneOffTodoDependencyComputed).delete()
     # Build todo lookup maps
     todo_id_map: dict[str, int] = {}  # (category_name, todo_title) -> todo object

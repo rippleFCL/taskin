@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import mermaid from 'mermaid';
 import { api } from '../api';
 import { DependencyGraph } from '../types';
+import { generateCategoryColorsUnique, baseHueForName } from '../lib/utils';
 import { Card } from './ui/card';
 import { RefreshCw } from 'lucide-react';
 import svgPanZoom from 'svg-pan-zoom';
@@ -58,6 +59,8 @@ export default function MermaidGraphView() {
         const todoNodeIds: string[] = [];
         const oneoffNodeIds: string[] = [];
         const controlNodeIds: string[] = [];
+        // Keep category labels by node id for grouping/coloring
+        const categoryLabels: Record<string, string> = {};
 
         // Define nodes based on node_type from API
         for (const n of graph.nodes) {
@@ -69,6 +72,7 @@ export default function MermaidGraphView() {
                     // Rounded rect for categories
                     lines.push(`${nid}("${label}")`);
                     categoryNodeIds.push(nid);
+                    categoryLabels[nid] = n.title;
                     break;
                 case 'oneoff':
                     // Stadium shape for one-offs
@@ -88,10 +92,52 @@ export default function MermaidGraphView() {
             }
         }
 
-        // Styles
-        if (categoryNodeIds.length > 0) {
-            lines.push('classDef category fill:#10b981,stroke:#0b3b2e,color:#0b3b2e');
-            lines.push(`class ${categoryNodeIds.join(',')} category;`);
+        // Styles: build per-category color classes using node_category_map, with fallback
+        const byCategory: Record<string, { categories: string[]; todos: string[] }> = {};
+        const categoryNameByNode: Record<string, string> = {};
+        if (graph.node_category_map) {
+            for (const [idStr, name] of Object.entries(graph.node_category_map)) {
+                const nid = nodeIdTodo(Number(idStr));
+                categoryNameByNode[nid] = name || 'Uncategorised';
+            }
+        }
+        // Build a quick reverse edge map to find nearest category parents for todos
+        const edgesByTo: Record<string, string[]> = {};
+        for (const e of graph.edges) {
+            const fromId = nodeIdTodo(e.from_node_id);
+            const toId = nodeIdTodo(e.to_node_id);
+            (edgesByTo[toId] ||= []).push(fromId);
+        }
+        // Group categories by their own titles
+        for (const nid of categoryNodeIds) {
+            const name = categoryLabels[nid] || 'Uncategorised';
+            (byCategory[name] ||= { categories: [], todos: [] }).categories.push(nid);
+        }
+        // Group todos by provided map or nearest category parent
+        for (const nid of todoNodeIds) {
+            let name = categoryNameByNode[nid];
+            if (!name) {
+                const parents = edgesByTo[nid] || [];
+                const catParent = parents.find(p => categoryLabels[p]);
+                if (catParent) name = categoryLabels[catParent];
+            }
+            if (!name) name = 'Uncategorised';
+            (byCategory[name] ||= { categories: [], todos: [] }).todos.push(nid);
+        }
+        // Define classDefs and assign classes
+        const usedHues: number[] = [];
+        // Sort names by their base hue to keep palette stable across renders
+        const entries = Object.entries(byCategory).sort((a, b) => baseHueForName(a[0]) - baseHueForName(b[0]));
+        for (const [name, group] of entries) {
+            const { hue, ...colors } = generateCategoryColorsUnique(name, usedHues, 26);
+            usedHues.push(hue);
+            const safe = name.replace(/[^a-zA-Z0-9_]/g, '_');
+            const catClass = `cat_${safe}`;
+            const todoClass = `todo_${safe}`;
+            lines.push(`classDef ${catClass} fill:${colors.category.fill},stroke:${colors.category.stroke},color:${colors.category.text}`);
+            lines.push(`classDef ${todoClass} fill:${colors.todo.fill},stroke:${colors.todo.stroke},color:${colors.todo.text}`);
+            if (group.categories.length > 0) lines.push(`class ${group.categories.join(',')} ${catClass};`);
+            if (group.todos.length > 0) lines.push(`class ${group.todos.join(',')} ${todoClass};`);
         }
         if (oneoffNodeIds.length > 0) {
             lines.push('classDef oneoff fill:#f59e0b,stroke:#7c3d00,color:#111');

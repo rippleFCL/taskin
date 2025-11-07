@@ -1,6 +1,7 @@
 import { Todo, TaskStatus } from '../types';
 import { useEffect, useState } from 'react';
 import { Button } from './ui/button';
+import { cn, statusButtonClasses, statusBadgeClasses } from '../lib/utils';
 import { Check, Circle, CircleDashed, SkipForward, Clock } from 'lucide-react';
 import { Badge } from './ui/badge';
 
@@ -90,27 +91,26 @@ export function TodoItem({ todo, onStatusChange }: TodoItemProps) {
                 <div className="flex-1">
                     <h4 className="text-base font-medium text-foreground flex items-center gap-2">
                         {todo.title}
-                        <Badge variant="outline" className="hidden sm:inline-flex">{getStatusLabel(todo.status).replace(/^[^\s]+\s*/, '')}</Badge>
+                        <Badge className={cn('hidden sm:inline-flex', statusBadgeClasses[todo.status])}>{getStatusLabel(todo.status).replace(/^[^\s]+\s*/, '')}</Badge>
                     </h4>
                     {todo.description && (
                         <p className="text-sm text-muted-foreground">{todo.description}</p>
                     )}
                 </div>
-                {/* Small colored dot for quick glance */}
-                <div className="ml-2 mt-1">
-                    <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: getStatusColor(todo.status) }} title={getStatusLabel(todo.status)} />
-                </div>
+                {/* Removed status dot in favor of colored badge */}
             </div>
 
             {/* Action buttons and in-progress time */}
             <div className="flex flex-wrap items-center gap-3 mb-2">
                 {/* Actions */}
                 {statuses.filter(s => s !== todo.status).map(s => {
+                    const classes = cn('flex items-center gap-1.5 border', statusButtonClasses[s]);
                     if (s === 'incomplete') {
                         return (
                             <Button
                                 key={s}
-                                variant={s === todo.status ? 'default' : 'outline'}
+                                variant="outline"
+                                className={classes}
                                 size="sm"
                                 onClick={() => handleStatusChange('incomplete')}
                                 aria-label="Mark as incomplete"
@@ -123,7 +123,8 @@ export function TodoItem({ todo, onStatusChange }: TodoItemProps) {
                         return (
                             <Button
                                 key={s}
-                                variant={s === todo.status ? 'default' : 'outline'}
+                                variant="outline"
+                                className={classes}
                                 size="sm"
                                 onClick={() => handleStatusChange('in-progress')}
                                 aria-label="Mark as in progress"
@@ -136,7 +137,8 @@ export function TodoItem({ todo, onStatusChange }: TodoItemProps) {
                         return (
                             <Button
                                 key={s}
-                                variant={s === todo.status ? 'default' : 'outline'}
+                                variant="outline"
+                                className={classes}
                                 size="sm"
                                 onClick={() => handleStatusChange('complete')}
                                 aria-label="Mark as complete"
@@ -148,7 +150,8 @@ export function TodoItem({ todo, onStatusChange }: TodoItemProps) {
                     return (
                         <Button
                             key={s}
-                            variant={s === todo.status ? 'default' : 'outline'}
+                            variant="outline"
+                            className={classes}
                             size="sm"
                             onClick={() => handleStatusChange('skipped')}
                             aria-label="Mark as skipped"

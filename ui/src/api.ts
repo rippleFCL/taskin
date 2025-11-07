@@ -44,7 +44,7 @@ export const api = {
   },
 
   async getRecommendedOneOffTodos(): Promise<OneOffTodo[]> {
-    const response = await fetch(`${API_BASE}/oneoff-todos/recommended`);
+    const response = await fetch(`${API_BASE}/recommended-oneoffs`);
     if (!response.ok) throw new Error('Failed to fetch recommended one-off todos');
     return response.json();
   },

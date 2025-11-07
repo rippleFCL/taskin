@@ -50,6 +50,8 @@ export interface DependencyEdge {
 export interface DependencyGraph {
   nodes: DependencyNode[];
   edges: DependencyEdge[];
+  // Maps node id to its category name (or "Uncategorised")
+  node_category_map?: Record<number, string>;
 }
 
 // Reports types

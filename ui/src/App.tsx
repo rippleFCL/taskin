@@ -37,6 +37,7 @@ function App() {
     const [error, setError] = useState<string | null>(null);
     const [pendingQueue, setPendingQueue] = useState<Array<{ id: number; status: TaskStatus }>>([]);
     const [oneOffs, setOneOffs] = useState<OneOffTodo[]>([]);
+    const [recommendedOneOffs, setRecommendedOneOffs] = useState<OneOffTodo[]>([]);
     const [newOneTitle, setNewOneTitle] = useState('');
     const [newOneDesc, setNewOneDesc] = useState('');
     // Inline edit state for One-offs
@@ -102,6 +103,7 @@ function App() {
     const LS_RECOMMENDED = 'taskin_recommended';
     const LS_PENDING = 'taskin_pending_queue';
     const LS_ONEOFFS = 'taskin_oneoffs';
+    const LS_REC_ONEOFFS = 'taskin_rec_oneoffs';
     const LS_ONEOFFS_PENDING = 'taskin_oneoffs_pending';
 
     const saveCache = (cats: CategoryWithTodos[], rec: TodoWithCategory[]) => {
@@ -194,17 +196,22 @@ function App() {
         if (initial) setIsLoading(true);
         setError(null);
         try {
-            const [categoriesData, recommendedData, oneOffData] = await Promise.all([
+            const [categoriesData, recommendedData, oneOffData, recOneOffData] = await Promise.all([
                 api.getCategories(),
                 api.getRecommendedTodos(),
                 api.getOneOffTodos(),
+                api.getRecommendedOneOffTodos(),
             ]);
             setCategories(categoriesData);
             setRecommendedTodos(recommendedData);
             setOneOffs(Array.isArray(oneOffData) ? oneOffData : []);
+            setRecommendedOneOffs(Array.isArray(recOneOffData) ? recOneOffData : []);
             // recOneOffData is used only in Recommended tab rendering; keep separately if needed later
             saveCache(categoriesData, recommendedData);
-            try { localStorage.setItem(LS_ONEOFFS, JSON.stringify(Array.isArray(oneOffData) ? oneOffData : [])); } catch { }
+            try {
+                localStorage.setItem(LS_ONEOFFS, JSON.stringify(Array.isArray(oneOffData) ? oneOffData : []));
+                localStorage.setItem(LS_REC_ONEOFFS, JSON.stringify(Array.isArray(recOneOffData) ? recOneOffData : []));
+            } catch { }
         } catch (err) {
             if (initial) setError('Failed to load data. Make sure the API is running.');
             console.error(err);
@@ -254,6 +261,7 @@ function App() {
             const cachedRec = localStorage.getItem(LS_RECOMMENDED);
             const cachedPending = localStorage.getItem(LS_PENDING);
             const cachedOneOffs = localStorage.getItem(LS_ONEOFFS);
+            const cachedRecOneOffs = localStorage.getItem(LS_REC_ONEOFFS);
             const cachedOneOffPending = localStorage.getItem(LS_ONEOFFS_PENDING);
             if (cachedCats && cachedRec) {
                 setCategories(JSON.parse(cachedCats));
@@ -267,6 +275,12 @@ function App() {
                     const parsed = JSON.parse(cachedOneOffs);
                     setOneOffs(Array.isArray(parsed) ? parsed : []);
                 } catch { setOneOffs([]); }
+            }
+            if (cachedRecOneOffs) {
+                try {
+                    const parsed = JSON.parse(cachedRecOneOffs);
+                    setRecommendedOneOffs(Array.isArray(parsed) ? parsed : []);
+                } catch { setRecommendedOneOffs([]); }
             }
             if (cachedPending) {
                 setPendingQueue(JSON.parse(cachedPending));
@@ -646,7 +660,7 @@ function App() {
                                 >
                                     <Sparkles className="w-4 h-4" />
                                     <span>Recommended</span>
-                                    <span> ({recommendedTodos.length + oneOffs.filter(o => o.status === 'incomplete').length})</span>
+                                    <span> ({recommendedTodos.length + recommendedOneOffs.length})</span>
                                 </button>
                                 <button
                                     onClick={() => { navigate('/oneoff'); setNavOpen(false); }}
@@ -693,7 +707,7 @@ function App() {
                                         className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-md ${currentTab === 'recommended' ? 'bg-accent text-accent-foreground' : 'hover:bg-accent hover:text-accent-foreground'}`}
                                     >
                                         <Sparkles className="w-4 h-4" />
-                                        Recommended ({recommendedTodos.length + oneOffs.filter(o => o.status === 'incomplete').length})
+                                        Recommended ({recommendedTodos.length + recommendedOneOffs.length})
                                     </button>
                                 </NavigationMenuItem>
                                 <NavigationMenuItem>
@@ -748,7 +762,7 @@ function App() {
             >
                 <Routes>
                     <Route path="/all" element={<AllTasksPage categories={categories} summary={summary as any} onStatusChange={handleStatusChange} />} />
-                    <Route path="/recommended" element={<RecommendedPage todos={recommendedTodos} oneOffs={oneOffs.filter(o => o.status === 'incomplete')} onStatusChange={handleStatusChange} onOneOffStatusChange={handleOneOffStatusChange} />} />
+                    <Route path="/recommended" element={<RecommendedPage todos={recommendedTodos} oneOffs={recommendedOneOffs} onStatusChange={handleStatusChange} onOneOffStatusChange={handleOneOffStatusChange} />} />
                     <Route path="/graph" element={<GraphPage />} />
                     <Route path="/reports" element={<ReportsPage />} />
                     <Route path="/oneoff" element={<OneOffsPage

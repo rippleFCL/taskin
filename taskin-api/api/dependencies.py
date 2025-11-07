@@ -1,3 +1,4 @@
+from calendar import c
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from models import OneOffTodoDependency, TaskStatus, get_db, Category, Todo, TodoDependency, OneOffTodo
@@ -7,9 +8,6 @@ from schemas import (
     DependencyEdge,
     NodeType,
 )
-
-
-
 
 
 router = APIRouter()
@@ -33,6 +31,7 @@ def get_dependency_graph(db: Session = Depends(get_db)):
 
     nodes: list[DependencyNode] = []
     edges: list[DependencyEdge] = []
+    nid_categories: dict[int, str] = {}
 
     nid = 0
 
@@ -48,6 +47,7 @@ def get_dependency_graph(db: Session = Depends(get_db)):
                 node_type=NodeType.todo,
             )
         )
+        nid_categories[nid] = todo.category.name if todo.category else "Uncategorised"
         todo_id_map[todo.id] = nid
         nid += 1
     for category in categories:
@@ -82,7 +82,7 @@ def get_dependency_graph(db: Session = Depends(get_db)):
 
     start_node_nid = nid + 1
     end_node_nid = nid + 2
-
+    oneoff_start_nid = nid + 3
     nodes.append(
         DependencyNode(
             id=start_node_nid,
@@ -98,11 +98,23 @@ def get_dependency_graph(db: Session = Depends(get_db)):
         )
     )
 
+    nodes.append(
+        DependencyNode(
+            id=one_off_cat_nid,
+            title="All One-Off Todos",
+            node_type=NodeType.category,
+        )
+    )
     for todo in todos:
         downstream_deps = db.query(TodoDependency).filter(TodoDependency.depends_on_todo_id == todo.id).all()
-        has_category_sub_dep = False # if another todo depends on the current todo
+        has_category_sub_dep = False  # if another todo depends on the current todo
         upstream_deps_count = db.query(TodoDependency).filter(TodoDependency.todo_id == todo.id).count()
-        depends_on_all_oneoffs = db.query(TodoDependency).filter(TodoDependency.todo_id == todo.id, TodoDependency.depends_on_all_oneoffs == 1).count() > 0
+        depends_on_all_oneoffs = (
+            db.query(TodoDependency)
+            .filter(TodoDependency.todo_id == todo.id, TodoDependency.depends_on_all_oneoffs == 1)
+            .count()
+            > 0
+        )
         if depends_on_all_oneoffs:
             edges.append(
                 DependencyEdge(
@@ -163,15 +175,47 @@ def get_dependency_graph(db: Session = Depends(get_db)):
                 )
             )
 
+    downstream_deps = db.query(TodoDependency).filter(TodoDependency.depends_on_all_oneoffs == 1).count()
+    upstream_deps = db.query(OneOffTodoDependency).all()
+
+    def connect_upstream_deps(dest_nid: int):
+        if len(upstream_deps) == 0:
+            edges.append(
+                DependencyEdge(
+                    from_node_id=start_node_nid,
+                    to_node_id=dest_nid,
+                )
+            )
+        else:
+            for dep in upstream_deps:
+                if dep.depends_on_todo_id is not None:
+                    edges.append(
+                        DependencyEdge(
+                            from_node_id=todo_id_map[dep.depends_on_todo_id],
+                            to_node_id=dest_nid,
+                        )
+                    )
+                if dep.depends_on_category_id is not None:
+                    edges.append(
+                        DependencyEdge(
+                            from_node_id=category_id_map[dep.depends_on_category_id],
+                            to_node_id=dest_nid,
+                        )
+                    )
+
     if len(oneoffs) == 0:
         # Connect all one-off todos control node to end node directly
-        edges.append(
-            DependencyEdge(
-                from_node_id=start_node_nid,
-                to_node_id=one_off_cat_nid,
+        connect_upstream_deps(one_off_cat_nid)
+    else:
+        nodes.append(
+            DependencyNode(
+                id=oneoff_start_nid,
+                title="One-Off Todos Start",
+                node_type=NodeType.control,
             )
         )
-    downstream_deps = db.query(TodoDependency).filter(TodoDependency.depends_on_all_oneoffs == 1).count()
+        connect_upstream_deps(oneoff_start_nid)
+
     if downstream_deps == 0:
         edges.append(
             DependencyEdge(
@@ -180,29 +224,12 @@ def get_dependency_graph(db: Session = Depends(get_db)):
             )
         )
     for oneoff in oneoffs:
-        upstream_deps = db.query(OneOffTodoDependency).all()
-        if len(upstream_deps) == 0:
-            edges.append(
-                DependencyEdge(
-                    from_node_id=start_node_nid,
-                    to_node_id=oneoff_id_map[oneoff.id],
-                )
+        edges.append(
+            DependencyEdge(
+                from_node_id=oneoff_start_nid,
+                to_node_id=oneoff_id_map[oneoff.id],
             )
-        for dep in upstream_deps:
-            if dep.depends_on_todo_id is not None:
-                edges.append(
-                    DependencyEdge(
-                        from_node_id=todo_id_map[dep.depends_on_todo_id],
-                        to_node_id=oneoff_id_map[oneoff.id],
-                    )
-                )
-            if dep.depends_on_category_id is not None:
-                edges.append(
-                    DependencyEdge(
-                        from_node_id=category_id_map[dep.depends_on_category_id],
-                        to_node_id=oneoff_id_map[oneoff.id],
-                    )
-                )
+        )
         edges.append(
             DependencyEdge(
                 from_node_id=oneoff_id_map[oneoff.id],
@@ -213,4 +240,5 @@ def get_dependency_graph(db: Session = Depends(get_db)):
     return DependencyGraph(
         nodes=nodes,
         edges=edges,
+        node_category_map=nid_categories,
     )

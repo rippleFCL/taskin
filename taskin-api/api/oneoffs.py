@@ -100,7 +100,7 @@ def update_oneoff_status(oneoff_id: int, status: TaskStatus, db: Session = Depen
     return item
 
 
-@router.get("/oneoff-todos/recommended", response_model=List[OneOffTodoResponse])
+@router.get("/recommended-oneoffs", response_model=List[OneOffTodoResponse])
 def get_recommended_oneoff_todos(db: Session = Depends(get_db)):
     """Get recommended one-off todos."""
     # Query all todos that are dependencies for one-off tasks

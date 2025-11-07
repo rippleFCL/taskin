@@ -1,5 +1,7 @@
 import { OneOffTodo, TaskStatus } from '../types';
 import { Button } from '../components/ui/button';
+import { cn } from '../lib/utils';
+import { statusButtonClasses, statusBadgeClasses } from '../lib/utils';
 import { Check, Circle, CircleDashed, Pencil, Plus, Trash, X, SkipForward } from 'lucide-react';
 
 interface Props {
@@ -72,10 +74,9 @@ export default function OneOffsPage(props: Props) {
                                         <>
                                             <h4 className="font-medium flex items-center gap-2">
                                                 {item.title}
-                                                <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-md bg-background/40 text-muted-foreground">
+                                                <span className={cn('inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-md', statusBadgeClasses[item.status])}>
                                                     {item.status === 'in-progress' ? 'In Progress' : item.status === 'complete' ? 'Complete' : item.status === 'skipped' ? 'Skipped' : 'Incomplete'}
                                                 </span>
-                                                <span className="ml-1 inline-block w-2.5 h-2.5 rounded-full" style={{ background: item.status === 'complete' ? '#22c55e' : item.status === 'in-progress' ? '#3b82f6' : item.status === 'skipped' ? '#f97316' : '#64748b' }} />
                                             </h4>
                                             {item.description && (
                                                 <p className="text-sm text-muted-foreground">{item.description}</p>
@@ -111,17 +112,18 @@ export default function OneOffsPage(props: Props) {
                             {/* Status buttons row below title/description */}
                             <div className="mt-3 flex flex-wrap gap-2">
                                 {(['incomplete', 'in-progress', 'complete', 'skipped'] as const).filter(s => s !== item.status).map(s => {
+                                    const classes = cn('flex items-center gap-1.5 border', statusButtonClasses[s]);
                                     if (s === 'incomplete') return (
-                                        <Button key={s} size="sm" variant={s === item.status ? 'default' : 'outline'} onClick={() => onStatusChange(item.id, 'incomplete')} aria-label="Mark as incomplete"><Circle className="w-4 h-4 sm:mr-2 shrink-0" /><span className="hidden sm:inline">Incomplete</span></Button>
+                                        <Button key={s} size="sm" variant="outline" className={classes} onClick={() => onStatusChange(item.id, 'incomplete')} aria-label="Mark as incomplete"><Circle className="w-4 h-4 sm:mr-2 shrink-0" /><span className="hidden sm:inline">Incomplete</span></Button>
                                     )
                                     if (s === 'in-progress') return (
-                                        <Button key={s} size="sm" variant={s === item.status ? 'default' : 'outline'} onClick={() => onStatusChange(item.id, 'in-progress')} aria-label="Mark as in progress"><CircleDashed className="w-4 h-4 sm:mr-2 shrink-0" /><span className="hidden sm:inline">In Progress</span></Button>
+                                        <Button key={s} size="sm" variant="outline" className={classes} onClick={() => onStatusChange(item.id, 'in-progress')} aria-label="Mark as in progress"><CircleDashed className="w-4 h-4 sm:mr-2 shrink-0" /><span className="hidden sm:inline">In Progress</span></Button>
                                     )
                                     if (s === 'complete') return (
-                                        <Button key={s} size="sm" variant={s === item.status ? 'default' : 'outline'} onClick={() => onStatusChange(item.id, 'complete')} aria-label="Mark as complete"><Check className="w-4 h-4 sm:mr-2 shrink-0" /><span className="hidden sm:inline">Complete</span></Button>
+                                        <Button key={s} size="sm" variant="outline" className={classes} onClick={() => onStatusChange(item.id, 'complete')} aria-label="Mark as complete"><Check className="w-4 h-4 sm:mr-2 shrink-0" /><span className="hidden sm:inline">Complete</span></Button>
                                     )
                                     return (
-                                        <Button key={s} size="sm" variant={s === item.status ? 'default' : 'outline'} onClick={() => onStatusChange(item.id, 'skipped')} aria-label="Mark as skipped"><SkipForward className="w-4 h-4 sm:mr-2 shrink-0" /><span className="hidden sm:inline">Skip</span></Button>
+                                        <Button key={s} size="sm" variant="outline" className={classes} onClick={() => onStatusChange(item.id, 'skipped')} aria-label="Mark as skipped"><SkipForward className="w-4 h-4 sm:mr-2 shrink-0" /><span className="hidden sm:inline">Skip</span></Button>
                                     )
                                 })}
                             </div>

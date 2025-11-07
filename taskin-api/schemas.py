@@ -1,6 +1,6 @@
 from enum import Enum
 from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional, List
+from typing import Literal, Optional, List
 from datetime import datetime
 from models import TaskStatus
 
@@ -31,6 +31,7 @@ class TodoResponse(ORMModel):
     reset_count: int = 0
     position: int = 0
     cumulative_in_progress_seconds: float = 0
+
 
 class CategoryWithTodos(CategoryResponse):
     """Schema for category with todos"""
@@ -66,11 +67,13 @@ class OneOffTodoResponse(ORMModel):
     description: Optional[str]
     status: TaskStatus
 
+
 class NodeType(Enum):
     todo = "todo"
     category = "category"
     oneoff = "oneoff"
     control = "control"
+
 
 # Dependency graph schemas
 class DependencyNode(BaseModel):
@@ -93,6 +96,7 @@ class DependencyGraph(BaseModel):
 
     nodes: List[DependencyNode]
     edges: List[DependencyEdge]
+    node_category_map: dict[int, str | Literal["Uncategorised"]]
 
 
 # Statistics/Report schemas
