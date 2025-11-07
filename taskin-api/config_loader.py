@@ -26,7 +26,7 @@ class OneOffTodoConfig(BaseModel):
 class AppConfig(BaseModel):
     webhook_url: Optional[HttpUrl] = None
     categories: List[CategoryConfig] = Field(default_factory=list)
-    oneoff_todos: OneOffTodoConfig = Field(default_factory=OneOffTodoConfig)
+    oneoff_deps: OneOffTodoConfig = Field(default_factory=OneOffTodoConfig)
 
 CONFIG: Optional[AppConfig] = None
 _CONFIG_PATH: str = "config.yml"

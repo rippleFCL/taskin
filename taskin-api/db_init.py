@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from models import Category, Todo, TodoDependency, TodoDependencyComputed, TaskStatus, SessionLocal
+from models import Category, OneOffTodoDependency, OneOffTodoDependencyComputed, Todo, TodoDependency, TodoDependencyComputed, TaskStatus, SessionLocal
 from config_loader import CONFIG, AppConfig, CategoryConfig, TodoConfig
 from alembic.config import Config
 from alembic import command
@@ -127,6 +127,7 @@ def sync_dependencies(db: Session, config: AppConfig):
     # Clear existing dependencies
     db.query(TodoDependency).delete()
     db.query(TodoDependencyComputed).delete()
+    db.query(OneOffTodoDependencyComputed).delete()
     # Build todo lookup maps
     todo_id_map: dict[str, int] = {}  # (category_name, todo_title) -> todo object
     cat_todo_map: dict[str, set[int]] = {}  # category_name -> category object
@@ -215,6 +216,27 @@ def sync_dependencies(db: Session, config: AppConfig):
     deep_dep_map: dict[int, set[int]] = {}
     for root_id in root_nodes:
         deep_dep_map.update(recursive_dep_solver(root_id, set()))
+
+    oneoff_deep_dep_map: set[int] = set()
+
+    for oneoff_category_dep in config.oneoff_deps.depends_on_categories:
+        dep_cat_id = category_id_map.get(oneoff_category_dep)
+        if dep_cat_id is not None:
+            dep = OneOffTodoDependency(depends_on_category_id=dep_cat_id)
+            db.add(dep)
+        for dep_id in cat_todo_map.get(oneoff_category_dep, set()):
+            oneoff_deep_dep_map.update(deep_dep_map.get(dep_id, set()))
+
+    for oneoff_todo_dep in config.oneoff_deps.depends_on_todos:
+        dep_id = todo_id_map.get(oneoff_todo_dep)
+        if dep_id:
+            dep = OneOffTodoDependency(depends_on_todo_id=dep_id)
+            db.add(dep)
+            oneoff_deep_dep_map.update(deep_dep_map.get(dep_id, set()))
+
+    for dep_id in oneoff_deep_dep_map:
+        comp_oneoff_dep = OneOffTodoDependencyComputed(depends_on_todo_id=dep_id)
+        db.add(comp_oneoff_dep)
 
     for todo_id, deps in deep_dep_map.items():
         for dep_id in deps:

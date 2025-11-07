@@ -124,6 +124,44 @@ class OneOffTodo(Base):
     description: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     status: Mapped[TaskStatus] = mapped_column(SAEnum(TaskStatus), default=TaskStatus.incomplete, nullable=False)
 
+class OneOffTodoDependency(Base):
+    """Explicit dependency relationships for visualization in the dependency graph.
+
+    Stores dependencies as defined in config:
+    - todo -> todo dependencies
+    - todo -> category dependencies (not expanded)
+    - todo -> all_oneoffs flag
+
+    This table is used ONLY for rendering the dependency graph.
+    """
+
+    __tablename__ = "oneoff_todo_dependencies"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+
+    # Explicit dependency types (only one should be set)
+    depends_on_todo_id: Mapped[Optional[int]] = mapped_column(ForeignKey("todos.id", ondelete="CASCADE"), nullable=True)
+    depends_on_category_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("categories.id", ondelete="CASCADE"), nullable=True
+    )
+
+class OneOffTodoDependencyComputed(Base):
+    """Fully computed/expanded dependencies for determining task readiness.
+
+    This table contains ALL dependencies (explicit + implicit + expanded):
+    - All explicit todo->todo dependencies
+    - All category dependencies expanded to individual todos
+    - All implicit dependencies (position-based within category)
+    - Recursive walk up the dependency tree
+
+    This table is used for the recommended todos logic.
+    """
+
+    __tablename__ = "oneoff_todo_dependencies_computed"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    depends_on_todo_id: Mapped[int] = mapped_column(ForeignKey("todos.id", ondelete="CASCADE"), nullable=False)
+
 
 class Report(Base):
     """Report generated each time the reset endpoint is called.

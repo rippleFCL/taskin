@@ -1,11 +1,10 @@
-from urllib.parse import urljoin
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List
 import json
 from urllib import request as urlrequest
 from urllib.error import URLError, HTTPError
-from models import get_db, OneOffTodo, TaskStatus
+from models import OneOffTodoDependencyComputed, Todo, get_db, OneOffTodo, TaskStatus
 from schemas import OneOffTodoResponse, OneOffTodoCreate, OneOffTodoUpdate
 from config_loader import WEBHOOK_URL
 
@@ -100,7 +99,20 @@ def update_oneoff_status(oneoff_id: int, status: TaskStatus, db: Session = Depen
     db.refresh(item)
     return item
 
+
 @router.get("/oneoff-todos/recommended", response_model=List[OneOffTodoResponse])
 def get_recommended_oneoff_todos(db: Session = Depends(get_db)):
     """Get recommended one-off todos."""
+    # Query all todos that are dependencies for one-off tasks
+    dependent_todos = (
+        db.query(Todo)
+        .join(
+            OneOffTodoDependencyComputed,
+            OneOffTodoDependencyComputed.depends_on_todo_id == Todo.id,
+        )
+        .filter(Todo.status != TaskStatus.complete)
+    )
+    if dependent_todos.count() > 0:
+        return []
+    # Otherwise, recommend all incomplete one-off todos
     return db.query(OneOffTodo).filter(OneOffTodo.status == TaskStatus.incomplete).all()

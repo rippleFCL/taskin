@@ -85,7 +85,7 @@ def get_recommended_todos(db: Session = Depends(get_db)):
 
     for todo in incomplete_todos:
         # Get ALL computed dependencies for this todo
-        dependencies = db.query(TodoDependencyComputed).filter(TodoDependencyComputed.todo_id == todo.id).all()
+        dependencies = db.query(Todo).join(TodoDependencyComputed, Todo.id == TodoDependencyComputed.depends_on_todo_id).filter(Todo.status != TaskStatus.complete)
         exp_deps = db.query(TodoDependency).filter(TodoDependency.todo_id == todo.id).all()
 
         one_off_satisfied = True
@@ -100,23 +100,11 @@ def get_recommended_todos(db: Session = Depends(get_db)):
                 if incomplete_oneoffs:
                     one_off_satisfied = False
                     break
-
-        if not dependencies:
-            # No dependencies means it's always recommended (if incomplete)
-            recommended.append(todo)
+        if not one_off_satisfied:
             continue
 
-        # Check if all dependencies are satisfied (complete or skipped)
-        all_satisfied = True
-
-        for dep in dependencies:
-            # All computed dependencies are todo->todo
-            dep_todo = db.query(Todo).filter(Todo.id == dep.depends_on_todo_id).first()
-            if not dep_todo or dep_todo.status not in [TaskStatus.complete, TaskStatus.skipped] or not one_off_satisfied:  # type: ignore
-                all_satisfied = False
-                break
-
-        if all_satisfied:
+        if dependencies.count() == 0:
+            # No dependencies means it's always recommended (if incomplete)
             recommended.append(todo)
 
     return recommended
