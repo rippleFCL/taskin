@@ -57,23 +57,27 @@ def reset_all_todos(db: Session = Depends(get_db)):
             if in_progress_duration == 0:
                 in_progress_duration = None
 
+            if todo.status == TaskStatus.complete:
+                compleated_todos += 1
+                final_status = TaskStatus.complete
+            elif todo.status == TaskStatus.skipped:
+                skipped_todos += 1
+                final_status = TaskStatus.skipped
+            else:
+                incomplete_todos += 1
+                final_status = TaskStatus.incomplete
+
             # Create task report
             task_report = TaskReport(
                 report_id=report.id,
                 todo_id=todo.id,
                 todo_title=todo.title,
                 category_name=todo.category.name if todo.category else "Unknown",
-                final_status=todo.status,
+                final_status=final_status,
                 in_progress_duration_seconds=in_progress_duration,
             )
-
             db.add(task_report)
-            if todo.status == TaskStatus.complete:
-                compleated_todos += 1
-            elif todo.status == TaskStatus.skipped:
-                skipped_todos += 1
-            else:
-                incomplete_todos += 1
+
         # Track counts for the report
 
         # Skipped todos ALWAYS reset to incomplete
