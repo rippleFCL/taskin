@@ -25,6 +25,7 @@ def get_report(start_date: datetime, end_date: datetime, db: Session = Depends(g
 
 def generate_aggregated_statistics(reports: List[Report]) -> AggregatedStatistics:
     task_statistics_map: dict[tuple[str, str], TaskStatistics] = {}
+    total_inprog_nz: dict[int, int] = {}
     for report in reports:
         for task_report in report.task_reports:
             ts = task_statistics_map.get((task_report.todo_title, task_report.category_name))
@@ -51,8 +52,11 @@ def generate_aggregated_statistics(reports: List[Report]) -> AggregatedStatistic
                 ts.times_skipped += 1
             else:
                 ts.times_incomplete += 1
-            if task_report.in_progress_duration_seconds is not None:
+            if task_report.in_progress_duration_seconds is not None and task_report.in_progress_duration_seconds > 0:
                 ts.tot_in_progress_duration_seconds += task_report.in_progress_duration_seconds
+                if task_report.todo_id not in total_inprog_nz:
+                    total_inprog_nz[task_report.todo_id] = 0
+                total_inprog_nz[task_report.todo_id] += 1
 
     task_statistics: List[TaskStatistics] = []
     for ts in task_statistics_map.values():
@@ -60,7 +64,7 @@ def generate_aggregated_statistics(reports: List[Report]) -> AggregatedStatistic
         if ts.total_appearances > 0:
             ts.completion_rate = ts.times_completed / ts.total_appearances
             ts.skip_rate = ts.times_skipped / ts.total_appearances
-            ts.avg_in_progress_duration_seconds = ts.tot_in_progress_duration_seconds / ts.total_appearances
+            ts.avg_in_progress_duration_seconds = ts.tot_in_progress_duration_seconds / total_inprog_nz.get(ts.todo_id, 1)
         else:
             ts.completion_rate = 0.0
             ts.skip_rate = 0.0
