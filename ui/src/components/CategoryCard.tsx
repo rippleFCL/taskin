@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { CategoryWithTodos, TaskStatus } from '../types';
 import { TodoItem } from './TodoItem';
+// TODO: Consider refactoring TodoItem to reuse new TimerChip logic using in_progress_start across pages.
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import { Badge } from './ui/badge';

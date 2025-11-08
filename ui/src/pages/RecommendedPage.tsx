@@ -1,8 +1,9 @@
 import { TodoWithCategory, TaskStatus, OneOffTodo } from '../types';
+import { useEffect, useState } from 'react';
 import { Button } from '../components/ui/button';
 import { cn } from '../lib/utils';
 import { statusButtonClasses, statusBadgeClasses } from '../lib/utils';
-import { Check, Circle, CircleDashed, SkipForward } from 'lucide-react';
+import { Check, Circle, CircleDashed, SkipForward, Clock } from 'lucide-react';
 
 interface Props {
     todos: TodoWithCategory[];
@@ -28,6 +29,39 @@ export default function RecommendedPage({ todos, oneOffs = [], onStatusChange, o
 
 
 
+    // Reusable, safe timer chip used in lists to avoid hooks inside loops
+    function TimerChip({ cumulativeSeconds, startIso, running }: { cumulativeSeconds: number; startIso?: string | null; running: boolean }) {
+        // Track current time for realtime ticking
+        const [nowMs, setNowMs] = useState<number>(Date.now());
+        useEffect(() => {
+            if (!running || !startIso) return;
+            const t = setInterval(() => setNowMs(Date.now()), 1000);
+            return () => clearInterval(t);
+        }, [running, startIso]);
+
+        const prior = Math.max(0, Math.floor(cumulativeSeconds || 0));
+        const startMs = startIso ? Date.parse(startIso) : null;
+        const runningAdd = running && startMs ? Math.max(0, Math.floor((nowMs - startMs) / 1000)) : 0;
+        const elapsed = prior + runningAdd;
+
+        const format = (total: number) => {
+            if (!total || total <= 0) return '0s';
+            const h = Math.floor(total / 3600);
+            const m = Math.floor((total % 3600) / 60);
+            const s = Math.floor(total % 60);
+            if (h > 0) return `${h}h ${m}m`;
+            if (m > 0) return `${m}m ${s}s`;
+            return `${s}s`;
+        };
+        if (!elapsed && !running) return null;
+        return (
+            <span className="ml-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded border bg-muted/60 text-sm font-mono text-muted-foreground">
+                <Clock className="w-3.5 h-3.5" />
+                {format(elapsed)}
+            </span>
+        );
+    }
+
     return (
         <div className="bg-background rounded-lg border shadow-sm p-6">
             <p className="text-sm text-muted-foreground text-center mb-6">
@@ -48,6 +82,7 @@ export default function RecommendedPage({ todos, oneOffs = [], onStatusChange, o
                                     <span className={cn('inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-md', statusBadgeClasses[todo.status])}>
                                         {todo.status === 'in-progress' ? 'In Progress' : todo.status === 'complete' ? 'Complete' : todo.status === 'skipped' ? 'Skipped' : 'Incomplete'}
                                     </span>
+                                    <TimerChip cumulativeSeconds={Number((todo as any).cumulative_in_progress_seconds || 0)} startIso={(todo as any).in_progress_start as string | undefined} running={todo.status === 'in-progress'} />
                                 </h4>
                             </div>
                             {todo.description && (
@@ -91,6 +126,7 @@ export default function RecommendedPage({ todos, oneOffs = [], onStatusChange, o
                                             <span className={cn('inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-md', statusBadgeClasses[item.status])}>
                                                 {item.status === 'in-progress' ? 'In Progress' : item.status === 'complete' ? 'Complete' : item.status === 'skipped' ? 'Skipped' : 'Incomplete'}
                                             </span>
+                                            <TimerChip cumulativeSeconds={0} startIso={undefined} running={item.status === 'in-progress'} />
                                         </h4>
                                     </div>
                                     {item.description && (

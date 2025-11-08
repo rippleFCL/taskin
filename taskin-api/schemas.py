@@ -27,6 +27,7 @@ class TodoResponse(ORMModel):
     description: Optional[str]
     status: TaskStatus
     category_id: int
+    in_progress_start: datetime | None = None
     reset_interval: int = 1
     reset_count: int = 0
     position: int = 0

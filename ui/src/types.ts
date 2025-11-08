@@ -12,9 +12,11 @@ export interface Todo {
   description: string | null;
   status: TaskStatus;
   category_id: number;
-  // Total seconds spent in-progress (current cycle); provided by API
-  in_progress: number;
-  // Backend currently exposes this field; keep for compatibility/fallback
+  // Deprecated: legacy field for current-cycle seconds (kept optional for backward compatibility)
+  in_progress?: number;
+  // Start timestamp of current in-progress session (ISO datetime) or null when not in-progress
+  in_progress_start?: string | null;
+  // Cumulative seconds spent in-progress prior to the current session (or total so far per API semantics)
   cumulative_in_progress_seconds?: number;
 }
 

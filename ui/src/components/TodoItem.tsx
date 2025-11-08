@@ -44,36 +44,19 @@ export function TodoItem({ todo, onStatusChange }: TodoItemProps) {
 
     const statuses: TaskStatus[] = ['incomplete', 'in-progress', 'complete', 'skipped'];
 
-    // Live ticking of in-progress time
-    const initialSeconds =
-        typeof todo.in_progress === 'number'
-            ? Number.isFinite(todo.in_progress) ? Math.max(0, Math.floor(todo.in_progress)) : 0
-            : typeof (todo as any).cumulative_in_progress_seconds === 'number'
-                ? Math.max(0, Math.floor((todo as any).cumulative_in_progress_seconds as number))
-                : 0;
-    const [displaySeconds, setDisplaySeconds] = useState<number>(initialSeconds);
-
-    // Sync from server-provided value when it changes
+    // Realtime elapsed using server-provided start time and cumulative seconds
+    const startIso = (todo as any).in_progress_start as string | undefined | null;
+    const priorSeconds = Math.max(0, Math.floor(((todo as any).cumulative_in_progress_seconds as number) || 0));
+    const [nowMs, setNowMs] = useState<number>(Date.now());
     useEffect(() => {
-        const nextSeconds =
-            typeof todo.in_progress === 'number'
-                ? Number.isFinite(todo.in_progress) ? Math.max(0, Math.floor(todo.in_progress)) : 0
-                : typeof (todo as any).cumulative_in_progress_seconds === 'number'
-                    ? Math.max(0, Math.floor((todo as any).cumulative_in_progress_seconds as number))
-                    : 0;
-        setDisplaySeconds(nextSeconds);
+        if (todo.status !== 'in-progress' || !startIso) return;
+        const t = setInterval(() => setNowMs(Date.now()), 1000);
+        return () => clearInterval(t);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [todo.id, todo.in_progress, (todo as any).cumulative_in_progress_seconds]);
-
-    // Increment each second while in-progress
-    useEffect(() => {
-        if (todo.status !== 'in-progress') return;
-        const timer = setInterval(() => {
-            setDisplaySeconds((s) => s + 1);
-        }, 1000);
-        return () => clearInterval(timer);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [todo.id, todo.status]);
+    }, [todo.id, todo.status, startIso]);
+    const startMs = startIso ? Date.parse(startIso) : null;
+    const runningAdd = (todo.status === 'in-progress' && startMs) ? Math.max(0, Math.floor((nowMs - startMs) / 1000)) : 0;
+    const displaySeconds = priorSeconds + runningAdd;
 
     const formatDuration = (seconds: number) => {
         if (!seconds || seconds <= 0) return '0s';
@@ -92,6 +75,12 @@ export function TodoItem({ todo, onStatusChange }: TodoItemProps) {
                     <h4 className="text-base font-medium text-foreground flex items-center gap-2">
                         {todo.title}
                         <Badge className={cn('hidden sm:inline-flex', statusBadgeClasses[todo.status])}>{getStatusLabel(todo.status).replace(/^[^\s]+\s*/, '')}</Badge>
+                        {(displaySeconds > 0 || todo.status === 'in-progress') && (
+                            <span className="ml-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded border bg-muted/60 text-sm font-mono text-muted-foreground">
+                                <Clock className="w-3.5 h-3.5" />
+                                {formatDuration(displaySeconds)}
+                            </span>
+                        )}
                     </h4>
                     {todo.description && (
                         <p className="text-sm text-muted-foreground">{todo.description}</p>
@@ -160,12 +149,7 @@ export function TodoItem({ todo, onStatusChange }: TodoItemProps) {
                         </Button>
                     );
                 })}
-                {(displaySeconds > 0 || todo.status === 'in-progress') && (
-                    <div className="text-xs text-muted-foreground inline-flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {formatDuration(displaySeconds)}
-                    </div>
-                )}
+                {/* Realtime timer moved next to title to match Recommended page styling */}
             </div>
 
             {/* Keep an accessible textual label for screen-readers and smaller screens */}
