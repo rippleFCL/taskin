@@ -89,7 +89,7 @@ def get_recommended_todos(db: Session = Depends(get_db)):
         dependencies = (
             db.query(TodoDependencyComputed)
             .join(Todo, Todo.id == TodoDependencyComputed.depends_on_todo_id)
-            .filter(Todo.status != TaskStatus.complete, TodoDependencyComputed.todo_id == todo.id)
+            .filter(Todo.status.not_in([TaskStatus.complete, TaskStatus.skipped]), TodoDependencyComputed.todo_id == todo.id)
             .distinct()
         )
         exp_deps = (

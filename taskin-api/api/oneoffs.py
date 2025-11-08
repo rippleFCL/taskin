@@ -110,7 +110,7 @@ def get_recommended_oneoff_todos(db: Session = Depends(get_db)):
             OneOffTodoDependencyComputed,
             OneOffTodoDependencyComputed.depends_on_todo_id == Todo.id,
         )
-        .filter(Todo.status != TaskStatus.complete)
+        .filter(Todo.status.not_in([TaskStatus.complete, TaskStatus.skipped]))
     )
     if dependent_todos.count() > 0:
         return []
