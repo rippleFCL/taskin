@@ -4,9 +4,10 @@ from typing import List
 import json
 from urllib import request as urlrequest
 from urllib.error import URLError, HTTPError
-from models import OneOffTodoDependencyComputed, Todo, get_db, OneOffTodo, TaskStatus
+from models import Todo, get_db, OneOffTodo, TaskStatus
 from schemas import OneOffTodoResponse, OneOffTodoCreate, OneOffTodoUpdate
 from config_loader import WEBHOOK_URL
+from dep_manager import dep_man
 
 router = APIRouter()
 
@@ -102,17 +103,20 @@ def update_oneoff_status(oneoff_id: int, status: TaskStatus, db: Session = Depen
 
 @router.get("/recommended-oneoffs", response_model=List[OneOffTodoResponse])
 def get_recommended_oneoff_todos(db: Session = Depends(get_db)):
-    """Get recommended one-off todos."""
-    # Query all todos that are dependencies for one-off tasks
-    dependent_todos = (
-        db.query(Todo)
-        .join(
-            OneOffTodoDependencyComputed,
-            OneOffTodoDependencyComputed.depends_on_todo_id == Todo.id,
-        )
-        .filter(Todo.status.not_in([TaskStatus.complete, TaskStatus.skipped]))
-    )
-    if dependent_todos.count() > 0:
+    """Get recommended one-off todos using the DDM for efficient dependency lookup."""
+    # Get all incomplete/in-progress todo IDs (these are blocking)
+    incomplete_todo_ids = {
+        todo.id for todo in db.query(Todo).filter(Todo.status.not_in([TaskStatus.complete, TaskStatus.skipped])).all()
+    }
+
+    # Use the DDM to get all dependencies for oneoffs
+    ddm = dep_man.full_graph.ddm
+    oneoff_deps = ddm.get_deps(dep_man.ONEOFF_START_ID)
+
+    # Check if any of the oneoff dependencies are still incomplete
+    if oneoff_deps & incomplete_todo_ids:
+        # Oneoffs have incomplete dependencies, not ready yet
         return []
+
     # Otherwise, recommend all incomplete one-off todos
     return db.query(OneOffTodo).filter(OneOffTodo.status == TaskStatus.incomplete).all()

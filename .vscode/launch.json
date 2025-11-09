@@ -19,7 +19,7 @@
             "env": {
                 "ENV": "DEV"
             },
-            "cwd": "${workspaceFolder}/taskin-api",
+            "cwd": "${workspaceFolder}/taskin_api",
             "jinja": true
         }
     ]

@@ -28,7 +28,6 @@ class AppConfig(BaseModel):
     categories: List[CategoryConfig] = Field(default_factory=list)
     oneoff_deps: OneOffTodoConfig = Field(default_factory=OneOffTodoConfig)
 
-CONFIG: Optional[AppConfig] = None
 _CONFIG_PATH: str = "config.yml"
 
 

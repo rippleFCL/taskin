@@ -4,13 +4,12 @@ from typing import List
 from datetime import datetime
 from models import (
     OneOffTodo,
-    TodoDependency,
     get_db,
     Todo,
     TaskStatus,
-    TodoDependencyComputed,
 )
 from schemas import TodoResponse, TodoWithCategory
+from dep_manager import dep_man
 
 router = APIRouter()
 
@@ -70,42 +69,46 @@ def get_recommended_todos(db: Session = Depends(get_db)):
     Get todos that are ready to work on (all dependencies satisfied).
     A todo is recommended if:
     - It's not already complete or skipped
-    - All of its computed dependencies (from TodoDependencyComputed) are complete or skipped
+    - All of its dependencies (from the DDM) are complete or skipped
 
-    This uses the fully expanded dependency table which includes:
+    This uses the Deep Dependency Map (DDM) which provides O(1) lookup of all
+    dependencies for each todo, including:
     - All explicit dependencies
-    - All implicit position-based dependencies
     - Recursive walk up the dependency tree
     - Expanded category dependencies
     """
     # Get all incomplete and in-progress todos (exclude complete and skipped)
     incomplete_todos = db.query(Todo).filter(Todo.status.in_([TaskStatus.incomplete, TaskStatus.in_progress])).all()
 
+    # Get incomplete/in-progress todo IDs (these are blocking)
+    blocking_todo_ids = {todo.id for todo in incomplete_todos}
+
+    # Check if there are any incomplete oneoffs
+    has_incomplete_oneoffs = db.query(OneOffTodo).filter(OneOffTodo.status != TaskStatus.complete).count() > 0
+
     recommended = []
+    ddm = dep_man.full_graph.ddm
 
     for todo in incomplete_todos:
-        # Get ALL computed dependencies for this todo
+        # Get all dependencies for this todo from the DDM
+        all_deps = ddm.get_deps(todo.id)
 
-        dependencies = (
-            db.query(TodoDependencyComputed)
-            .join(Todo, Todo.id == TodoDependencyComputed.depends_on_todo_id)
-            .filter(Todo.status.not_in([TaskStatus.complete, TaskStatus.skipped]), TodoDependencyComputed.todo_id == todo.id)
-            .distinct()
-        )
-        exp_deps = (
-            db.query(TodoDependencyComputed)
-            .join(TodoDependency, TodoDependency.todo_id == TodoDependencyComputed.depends_on_todo_id)
-            .filter(TodoDependency.depends_on_all_oneoffs == 1, TodoDependencyComputed.todo_id == todo.id)
-            .distinct()
-        )
+        # Check if any of the dependencies are still incomplete
+        incomplete_deps = all_deps & blocking_todo_ids
 
+        if incomplete_deps:
+            # Has incomplete dependencies, not ready
+            continue
 
-        if exp_deps.count() > 0:
-            if db.query(OneOffTodo).filter(OneOffTodo.status != TaskStatus.complete).count() != 0:
+        # Check if this todo depends on oneoffs
+        oneoff_deps = ddm.get_deps(dep_man.ONEOFF_START_ID)
+        if todo.id in oneoff_deps or dep_man.ONEOFF_START_ID in all_deps:
+            # This todo has oneoffs as a dependency
+            if has_incomplete_oneoffs:
+                # Oneoffs not complete yet
                 continue
 
-        if dependencies.count() == 0:
-            # No dependencies means it's always recommended (if incomplete)
-            recommended.append(todo)
+        # All dependencies satisfied!
+        recommended.append(todo)
 
     return recommended
