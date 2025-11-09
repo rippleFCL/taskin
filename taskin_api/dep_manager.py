@@ -145,7 +145,7 @@ class Graph:
             for dep in node.dependencies:
                 self.nodes[dept_tid].dependencies.add(dep)
                 self.nodes[dep].dependants.add(dept_tid)
-                self.nodes[dep].dependants.remove(tid)
+                self.nodes[dep].dependants.discard(tid)
             self.nodes[dept_tid].dependencies.remove(tid)
 
         for cat_dep_cid in node.cat_dependencies:
@@ -167,12 +167,16 @@ class Graph:
                 else: # pass dependencies through the category
                     for dept in self.categories[node.cat_dependant].dependants:
                         self.nodes[dept].dependencies.add(dep)
+
             for cat_dep in node.cat_dependencies: # pass dependencies through the category
                 for dept in self.categories[node.cat_dependant].dependants:
                     self.nodes[dept].cat_dependencies.add(cat_dep)
+
+            if self.categories[node.cat_dependant].dependencies == set():
+                for dept in self.categories[node.cat_dependant].dependants:
+                    self.nodes[dept].cat_dependencies.discard(node.cid)
+                del self.categories[node.cat_dependant] # remove empty category
         del self.nodes[tid]
-        if self.categories[node.cid].dependencies == set():
-            del self.categories[node.cid] # remove empty category
 
     def _filtered_ddm(self, current_tid: int, filter: set[int], filter_cat: set[int]) -> set[int]:
         """Filters the deep dependency map based on a set of todo IDs
@@ -264,6 +268,7 @@ class Graph:
         for tid in tids:
             new_graph.remove_node(tid)
         new_graph.build_ddm()
+        # new_graph.dedupe() # FIXME:  DEDUPE CAUSES ISSUES
         return new_graph
 
 

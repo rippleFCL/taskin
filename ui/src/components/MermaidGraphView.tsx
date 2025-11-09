@@ -21,6 +21,7 @@ export default function MermaidGraphView() {
     const [graph, setGraph] = useState<DependencyGraph | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const [graphType, setGraphType] = useState<'scoped' | 'full'>('scoped');
     const containerRef = useRef<HTMLDivElement | null>(null);
     const [svg, setSvg] = useState<string>('');
     const panZoomRef = useRef<ReturnType<typeof svgPanZoom> | null>(null);
@@ -32,7 +33,7 @@ export default function MermaidGraphView() {
         setLoading(true);
         setError(null);
         try {
-            const g = await api.getDependencyGraph();
+            const g = await api.getDependencyGraph(graphType);
             setGraph(g);
         } catch (e: any) {
             setError(e?.message || 'Failed to load dependency graph');
@@ -46,7 +47,7 @@ export default function MermaidGraphView() {
         load();
         const id = setInterval(load, 30000);
         return () => clearInterval(id);
-    }, []);
+    }, [graphType]);
 
     // Build Mermaid code from API data
     const mermaidCode = useMemo(() => {
@@ -307,6 +308,27 @@ export default function MermaidGraphView() {
             <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground p-4 bg-background/60 border-b">
                 <span>Nodes: <strong>{graph?.nodes.length ?? 0}</strong></span>
                 <span>Edges: <strong>{graph?.edges.length ?? 0}</strong></span>
+                <div className="flex items-center gap-2 ml-4">
+                    <span className="text-xs">Graph Type:</span>
+                    <button
+                        onClick={() => setGraphType('scoped')}
+                        className={`px-3 py-1.5 rounded-md border text-xs font-medium transition-colors ${graphType === 'scoped'
+                                ? 'bg-primary text-primary-foreground border-primary'
+                                : 'hover:bg-accent'
+                            }`}
+                    >
+                        Scoped
+                    </button>
+                    <button
+                        onClick={() => setGraphType('full')}
+                        className={`px-3 py-1.5 rounded-md border text-xs font-medium transition-colors ${graphType === 'full'
+                                ? 'bg-primary text-primary-foreground border-primary'
+                                : 'hover:bg-accent'
+                            }`}
+                    >
+                        Full
+                    </button>
+                </div>
                 <div className="ml-auto flex items-center gap-2">
                     <button
                         onClick={() => panZoomRef.current?.zoomIn()}

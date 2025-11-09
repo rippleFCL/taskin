@@ -82,8 +82,8 @@ export const api = {
   },
 
   // Dependency graph
-  async getDependencyGraph(): Promise<DependencyGraph> {
-    const response = await fetch(`${API_BASE}/dependency-graph`);
+  async getDependencyGraph(graphType: 'scoped' | 'full' = 'scoped'): Promise<DependencyGraph> {
+    const response = await fetch(`${API_BASE}/dependency-graph?graph_type=${graphType}`);
     if (!response.ok) throw new Error('Failed to fetch dependency graph');
     return response.json();
   },

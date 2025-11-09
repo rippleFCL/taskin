@@ -14,7 +14,7 @@ router = APIRouter()
 
 
 @router.get("/dependency-graph", response_model=DependencyGraph)
-def get_dependency_graph(db: Session = Depends(get_db), graph_type: str = Query("full", enum=["full", "scoped"])):
+def get_dependency_graph(db: Session = Depends(get_db), graph_type: str = Query("scoped", enum=["full", "scoped"])):
     """
     Get the complete dependency graph showing relationships between all todos.
     Returns nodes (todos and categories) and edges (dependency relationships).
@@ -41,6 +41,8 @@ def get_dependency_graph(db: Session = Depends(get_db), graph_type: str = Query(
 
     # Add todo nodes
     for todo in todos:
+        if todo.id not in graph.nodes:
+            continue  # Skip todos not in the graph (e.g., completed todos)
         nodes.append(
             DependencyNode(
                 id=nid,
@@ -54,6 +56,8 @@ def get_dependency_graph(db: Session = Depends(get_db), graph_type: str = Query(
 
     # Add category nodes
     for category in categories:
+        if category.id not in graph.categories:
+            continue  # Skip categories not in the graph
         nodes.append(
             DependencyNode(
                 id=nid,

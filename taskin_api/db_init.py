@@ -116,6 +116,10 @@ def sync_db_from_config(db: Session):
 
     dep_man.build_full_graph(categories=db.query(Category).all())
 
+    unready_todos = db.query(Todo.id).filter(Todo.reset_count > 0).all()
+    unready_ids = {tid for (tid,) in unready_todos}
+    dep_man.scope_subgraph(unready_ids)
+
 
 def initialize_database():
     """Initialize database and sync with config data"""
