@@ -44,7 +44,7 @@ RUN --mount=type=bind,from=reqs,source=/app/requirements.txt,target=/app/require
     mkdir -p /app/data && \
     chown 1000:1000 /app/data
 
-COPY taskin-api/ .
+COPY taskin_api/ .
 
 # Copy built React app from web-builder stage
 COPY --from=web-builder /app/web/dist ./static
