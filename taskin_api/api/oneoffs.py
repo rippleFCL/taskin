@@ -119,4 +119,4 @@ def get_recommended_oneoff_todos(db: Session = Depends(get_db)):
         return []
 
     # Otherwise, recommend all incomplete one-off todos
-    return db.query(OneOffTodo).filter(OneOffTodo.status == TaskStatus.incomplete).all()
+    return db.query(OneOffTodo).filter(OneOffTodo.status != TaskStatus.complete).all()
