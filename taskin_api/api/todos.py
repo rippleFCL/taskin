@@ -56,7 +56,8 @@ def update_todo_status(todo_id: int, status: TaskStatus, db: Session = Depends(g
             duration = (datetime.now() - db_todo.in_progress_start).total_seconds()
             db_todo.cumulative_in_progress_seconds += duration
             db_todo.in_progress_start = None
-
+    if status == TaskStatus.incomplete:
+        db_todo.reset_count = 0 # Reset the reset_count when marking incomplete
     db_todo.status = status
     db.commit()
     db.refresh(db_todo)
