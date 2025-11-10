@@ -101,8 +101,7 @@ def get_recommended_todos(db: Session = Depends(get_db)):
             continue
 
         # Check if this todo depends on oneoffs
-        oneoff_deps = ddm.get_deps(dep_man.ONEOFF_START_ID)
-        if todo.id in oneoff_deps or dep_man.ONEOFF_START_ID in all_deps:
+        if dep_man.ONEOFF_START_ID in all_deps:
             # This todo has oneoffs as a dependency
             if has_incomplete_oneoffs:
                 # Oneoffs not complete yet
