@@ -137,6 +137,7 @@ def get_dependency_graph(db: Session = Depends(get_db), graph_type: str = Query(
                         to_node_id=todo_id_map[tid],
                     )
                 )
+                continue
             if cat_dep in category_id_map:
                 edges.append(
                     DependencyEdge(

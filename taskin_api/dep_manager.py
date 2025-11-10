@@ -142,23 +142,18 @@ class Graph:
             return
         node = self.nodes[tid]
         for dept_tid in node.dependants:
-            for dep in node.dependencies:
+            for dep in node.dependencies: # move dependencies to dependant
                 self.nodes[dept_tid].dependencies.add(dep)
                 self.nodes[dep].dependants.add(dept_tid)
-                self.nodes[dep].dependants.discard(tid)
-            self.nodes[dept_tid].dependencies.remove(tid)
 
-        for cat_dep_cid in node.cat_dependencies:
-            for dept_tid in node.dependants:
+            for cat_dep_cid in node.cat_dependencies:
                 self.nodes[dept_tid].cat_dependencies.add(cat_dep_cid)
                 self.categories[cat_dep_cid].dependants.add(dept_tid)
-            self.categories[cat_dep_cid].dependants.remove(tid)
 
 
 
         # handle node that is cat_dependant
         if node.cat_dependant is not None:
-            self.categories[node.cat_dependant].dependencies.remove(tid)
             for dep in node.dependencies:
                 dep_node = self.nodes[dep]
                 if dep_node.cid == node.cid:
@@ -171,7 +166,17 @@ class Graph:
             for cat_dep in node.cat_dependencies: # pass dependencies through the category
                 for dept in self.categories[node.cat_dependant].dependants:
                     self.nodes[dept].cat_dependencies.add(cat_dep)
+                    self.categories[cat_dep].dependants.add(dept)
 
+
+        for dep in node.dependencies:
+            self.nodes[dep].dependants.discard(tid)
+        for dep in node.dependants:
+            self.nodes[dep].dependencies.discard(tid)
+        for cat_dep in node.cat_dependencies:
+            self.categories[cat_dep].dependants.discard(tid)
+        if node.cat_dependant is not None:
+            self.categories[node.cat_dependant].dependencies.discard(tid)
             if self.categories[node.cat_dependant].dependencies == set():
                 for dept in self.categories[node.cat_dependant].dependants:
                     self.nodes[dept].cat_dependencies.discard(node.cid)
@@ -263,12 +268,78 @@ class Graph:
         new_graph.build_ddm()
         return new_graph
 
+    def validate(self) -> bool:
+        """Validate graph integrity by checking for dangling references.
+
+        Returns True if graph is valid, False if there are dangling nodes.
+        A valid graph has:
+        - All node dependencies point to existing nodes
+        - All node dependants point to existing nodes
+        - All node cat_dependencies point to existing categories
+        - All category dependencies point to existing nodes
+        - All category dependants point to existing nodes
+        - Bidirectional consistency: if A depends on B, then B has A as dependant
+        """
+        # Check TodoNode dependencies and dependants
+        for tid, node in self.nodes.items():
+            # Check node dependencies point to valid nodes
+            for dep_tid in node.dependencies:
+                if dep_tid not in self.nodes:
+                    return False
+                # Check bidirectional consistency
+                if tid not in self.nodes[dep_tid].dependants:
+                    return False
+
+            # Check node dependants point to valid nodes
+            for dept_tid in node.dependants:
+                if dept_tid not in self.nodes:
+                    return False
+                # Check bidirectional consistency
+                if tid not in self.nodes[dept_tid].dependencies:
+                    return False
+
+            # Check category dependencies point to valid categories
+            for cat_dep_cid in node.cat_dependencies:
+                if cat_dep_cid not in self.categories:
+                    return False
+                # Check bidirectional consistency
+                if tid not in self.categories[cat_dep_cid].dependants:
+                    return False
+
+            # Check cat_dependant points to valid category (if set)
+            if node.cat_dependant is not None:
+                if node.cat_dependant not in self.categories:
+                    return False
+                # Check bidirectional consistency
+                if tid not in self.categories[node.cat_dependant].dependencies:
+                    return False
+
+        # Check CategoryNode dependencies and dependants
+        for cid, cat_node in self.categories.items():
+            # Check category dependencies point to valid nodes
+            for dep_tid in cat_node.dependencies:
+                if dep_tid not in self.nodes:
+                    return False
+                # Check bidirectional consistency
+                if self.nodes[dep_tid].cat_dependant != cid:
+                    return False
+
+            # Check category dependants point to valid nodes
+            for dept_tid in cat_node.dependants:
+                if dept_tid not in self.nodes:
+                    return False
+                # Check bidirectional consistency
+                if cid not in self.nodes[dept_tid].cat_dependencies:
+                    return False
+
+        return True
+
     def filter_out(self, tids: set[int]) -> "Graph":
         new_graph = self.copy()
         for tid in tids:
             new_graph.remove_node(tid)
         new_graph.build_ddm()
-        # new_graph.dedupe() # FIXME:  DEDUPE CAUSES ISSUES
+        new_graph.dedupe()
         return new_graph
 
 
@@ -317,10 +388,15 @@ class DependencyManager:
                 new_graph.add_cat_dep(self.ONEOFF_START_ID, dep_cat_id)
 
         new_graph.build_ddm()
+        new_graph.dedupe()
         self.full_graph = new_graph
 
     def scope_subgraph(self, excluded_tids: set[int]):
         self.sub_graph = self.full_graph.filter_out(excluded_tids)
+        if self.sub_graph.validate() is False:
+            raise ValueError("Scoped subgraph is invalid after filtering")
+        if self.sub_graph.ddm != self.full_graph.ddm.filter(excluded_tids):
+            raise ValueError("Scoped subgraph DDM does not match filtered full graph DDM")
 
 
 
