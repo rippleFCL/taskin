@@ -62,11 +62,22 @@ export default function MermaidGraphView() {
         const controlNodeIds: string[] = [];
         // Keep category labels by node id for grouping/coloring
         const categoryLabels: Record<string, string> = {};
+        // Track nodes with custom border colors
+        const customBorderNodes: Map<string, string> = new Map();
 
         // Define nodes based on node_type from API
         for (const n of graph.nodes) {
             const nid = nodeIdTodo(n.id);
             const label = esc(n.title);
+
+            // Check for custom border color
+            if (n.boarder_color) {
+                const { r, g, b } = n.boarder_color;
+                // Convert rgb to hex because Mermaid class/style doesn't accept rgb() reliably
+                const toHex = (num: number) => Math.max(0, Math.min(255, num)).toString(16).padStart(2, '0');
+                const hex = `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+                customBorderNodes.set(nid, hex);
+            }
 
             switch (n.node_type) {
                 case 'category':
@@ -127,6 +138,8 @@ export default function MermaidGraphView() {
         }
         // Define classDefs and assign classes
         const usedHues: number[] = [];
+        // Map each node id to its base fill/text colors (for custom styled nodes)
+        const nodeBaseStyle: Record<string, { fill: string; text: string }> = {};
         // Sort names by their base hue to keep palette stable across renders
         const entries = Object.entries(byCategory).sort((a, b) => baseHueForName(a[0]) - baseHueForName(b[0]));
         for (const [name, group] of entries) {
@@ -137,8 +150,14 @@ export default function MermaidGraphView() {
             const todoClass = `todo_${safe}`;
             lines.push(`classDef ${catClass} fill:${colors.category.fill},stroke:${colors.category.stroke},color:${colors.category.text}`);
             lines.push(`classDef ${todoClass} fill:${colors.todo.fill},stroke:${colors.todo.stroke},color:${colors.todo.text}`);
-            if (group.categories.length > 0) lines.push(`class ${group.categories.join(',')} ${catClass};`);
-            if (group.todos.length > 0) lines.push(`class ${group.todos.join(',')} ${todoClass};`);
+            // Record base fill/text for all nodes in this group
+            for (const nid of group.categories) nodeBaseStyle[nid] = { fill: colors.category.fill, text: colors.category.text };
+            for (const nid of group.todos) nodeBaseStyle[nid] = { fill: colors.todo.fill, text: colors.todo.text };
+            // Exclude nodes that will get custom borders from class assignment so style() can fully control stroke
+            const filteredCats = group.categories.filter(nid => !customBorderNodes.has(nid));
+            const filteredTodos = group.todos.filter(nid => !customBorderNodes.has(nid));
+            if (filteredCats.length > 0) lines.push(`class ${filteredCats.join(',')} ${catClass};`);
+            if (filteredTodos.length > 0) lines.push(`class ${filteredTodos.join(',')} ${todoClass};`);
         }
         if (oneoffNodeIds.length > 0) {
             lines.push('classDef oneoff fill:#f59e0b,stroke:#7c3d00,color:#111');
@@ -158,6 +177,15 @@ export default function MermaidGraphView() {
 
         // Basic styling for readability
         lines.push('linkStyle default stroke:#cbd5e1,stroke-width:2,opacity:0.85');
+
+        // Apply custom border colors to nodes that have them using Mermaid's style directive
+        // Append at the very end and include fill/text to preserve appearance when excluded from classes above
+        for (const [nid, borderColor] of customBorderNodes.entries()) {
+            const base = nodeBaseStyle[nid];
+            const fillPart = base?.fill ? `fill:${base.fill},` : '';
+            const textPart = base?.text ? `color:${base.text},` : '';
+            lines.push(`style ${nid} ${fillPart}${textPart}stroke:${borderColor},stroke-width:2px`);
+        }
 
         return lines.join('\n');
     }, [graph]);
@@ -313,8 +341,8 @@ export default function MermaidGraphView() {
                     <button
                         onClick={() => setGraphType('scoped')}
                         className={`px-3 py-1.5 rounded-md border text-xs font-medium transition-colors ${graphType === 'scoped'
-                                ? 'bg-primary text-primary-foreground border-primary'
-                                : 'hover:bg-accent'
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'hover:bg-accent'
                             }`}
                     >
                         Scoped
@@ -322,8 +350,8 @@ export default function MermaidGraphView() {
                     <button
                         onClick={() => setGraphType('full')}
                         className={`px-3 py-1.5 rounded-md border text-xs font-medium transition-colors ${graphType === 'full'
-                                ? 'bg-primary text-primary-foreground border-primary'
-                                : 'hover:bg-accent'
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'hover:bg-accent'
                             }`}
                     >
                         Full

@@ -36,12 +36,20 @@ export interface OneOffTodo {
 }
 
 // Dependency Graph types (from API)
+export interface RGBColor {
+  r: number;
+  g: number;
+  b: number;
+}
+
 export interface DependencyNode {
   id: number;
   title: string;
   // Node type provided by API (see OpenAPI). Supported values include:
   // 'todo' | 'category' | 'oneoff' | 'control'
   node_type: 'todo' | 'category' | 'oneoff' | 'control' | (string & {});
+  // Optional border color (note: API uses "boarder_color" - misspelling)
+  boarder_color?: RGBColor | null;
 }
 
 export interface DependencyEdge {

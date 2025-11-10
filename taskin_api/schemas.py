@@ -75,6 +75,12 @@ class NodeType(Enum):
     oneoff = "oneoff"
     control = "control"
 
+class RGBColor(BaseModel):
+    """RGB color representation"""
+
+    r: int = Field(..., ge=0, le=255)
+    g: int = Field(..., ge=0, le=255)
+    b: int = Field(..., ge=0, le=255)
 
 # Dependency graph schemas
 class DependencyNode(BaseModel):
@@ -83,6 +89,7 @@ class DependencyNode(BaseModel):
     id: int
     title: str
     node_type: NodeType
+    boarder_color: Optional[RGBColor] = None
 
 
 class DependencyEdge(BaseModel):

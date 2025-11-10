@@ -6,6 +6,7 @@ from schemas import (
     DependencyNode,
     DependencyEdge,
     NodeType,
+    RGBColor,
 )
 from dep_manager import dep_man
 
@@ -43,11 +44,21 @@ def get_dependency_graph(db: Session = Depends(get_db), graph_type: str = Query(
     for todo in todos:
         if todo.id not in graph.nodes:
             continue  # Skip todos not in the graph (e.g., completed todos)
+        if todo.status == TaskStatus.complete:
+            color = RGBColor(r=0, g=204, b=102)  # Green for completed
+        elif todo.status == TaskStatus.in_progress:
+            # blue for in-progress
+            color = RGBColor(r=51, g=102, b=204)
+        elif todo.status == TaskStatus.skipped:
+            color = RGBColor(r=204, g=102, b=51)  # Orange for skipped
+        else:
+            color = None
         nodes.append(
             DependencyNode(
                 id=nid,
                 title=todo.title,
                 node_type=NodeType.todo,
+                boarder_color=color
             )
         )
         nid_categories[nid] = todo.category.name if todo.category else "Uncategorised"
