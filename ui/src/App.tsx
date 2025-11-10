@@ -119,6 +119,24 @@ function App() {
         } catch { }
     };
 
+    // Lightweight refresh for the Recommended tab only (todos + one-offs)
+    const refreshRecommended = useCallback(async () => {
+        try {
+            const [recommendedData, recOneOffData] = await Promise.all([
+                api.getRecommendedTodos(),
+                api.getRecommendedOneOffTodos(),
+            ]);
+            setRecommendedTodos(recommendedData);
+            setRecommendedOneOffs(Array.isArray(recOneOffData) ? recOneOffData : []);
+            try {
+                localStorage.setItem(LS_RECOMMENDED, JSON.stringify(recommendedData));
+                localStorage.setItem(LS_REC_ONEOFFS, JSON.stringify(Array.isArray(recOneOffData) ? recOneOffData : []));
+            } catch { }
+        } catch (e) {
+            // ignore; periodic poll or full refresh will catch up
+        }
+    }, []);
+
     // One-off pending operations queue
     type OneOffOp =
         | { kind: 'create'; clientId: number; title: string; description?: string | null; status?: TaskStatus }
@@ -503,10 +521,12 @@ function App() {
             setIsSyncing(false);
             isProcessingRef.current = false;
             // Soft refresh after syncing
-            // Optionally refresh; keep lightweight to avoid flicker
-            // loadData(false);
+            // Lightweight refresh of recommended lists after sync completes
+            if (navigator.onLine && serverOnline) {
+                refreshRecommended();
+            }
         }
-    }, [pendingQueue, oneOffPending, serverOnline]);
+    }, [pendingQueue, oneOffPending, serverOnline, refreshRecommended]);
 
     useEffect(() => {
         if (isOnline && serverOnline) {
@@ -573,7 +593,8 @@ function App() {
         try {
             if (navigator.onLine && serverOnline) {
                 await api.updateOneOffStatus(id, status);
-                loadData(false);
+                // Update recommended lists without full reload
+                refreshRecommended();
             }
         } catch (e) {
             // Silent failure; next poll will sync
@@ -798,24 +819,33 @@ function App() {
                                         try { localStorage.setItem(LS_ONEOFFS, JSON.stringify(list)); } catch { }
                                         return list;
                                     });
+                                    refreshRecommended();
                                     setOneOffPending(prev => {
-                                        const remapped = prev.map(op => {
-                                            if (op.kind === 'status' || op.kind === 'update' || op.kind === 'delete') {
-                                                if (op.id === tempId) return { ...op, id: created.id } as OneOffOp;
-                                            } else if (op.kind === 'create' && op.clientId === tempId) {
+                                        const remapped = prev.map(x => {
+                                            if (x.kind === 'status' || x.kind === 'update' || x.kind === 'delete') {
+                                                if (x.id === tempId) return { ...x, id: created.id } as OneOffOp;
+                                            } else if (x.kind === 'create' && x.clientId === tempId) {
                                                 return { kind: 'update', id: created.id, title, description } as OneOffOp;
                                             }
-                                            return op;
-                                        }).filter(op => !(op.kind === 'create' && op.clientId === tempId));
+                                            return x;
+                                        }).filter(x => !(x.kind === 'create' && x.clientId === tempId));
                                         const compact = compressOneOffOps(remapped);
                                         saveOneOffPending(compact);
                                         return compact;
                                     });
                                 } else {
-                                    setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'create' as const, clientId: tempId, title, description, status: 'incomplete' as TaskStatus }]); saveOneOffPending(next); return next; });
+                                    setOneOffPending(prev => {
+                                        const next = compressOneOffOps([...prev, { kind: 'create' as const, clientId: tempId, title, description, status: 'incomplete' as TaskStatus }]);
+                                        saveOneOffPending(next);
+                                        return next;
+                                    });
                                 }
                             } catch (e) {
-                                setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'create' as const, clientId: tempId, title, description, status: 'incomplete' as TaskStatus }]); saveOneOffPending(next); return next; });
+                                setOneOffPending(prev => {
+                                    const next = compressOneOffOps([...prev, { kind: 'create' as const, clientId: tempId, title, description, status: 'incomplete' as TaskStatus }]);
+                                    saveOneOffPending(next);
+                                    return next;
+                                });
                             }
                         }}
                         onStartEdit={(item) => { setEditingId(item.id); setEditTitle(item.title); setEditDesc(item.description || ''); }}
@@ -833,6 +863,7 @@ function App() {
                             try {
                                 if (canSync) {
                                     await api.updateOneOffTodo(id, { title, description });
+                                    refreshRecommended();
                                 } else {
                                     setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'update' as const, id, title, description }]); saveOneOffPending(next); return next; });
                                 }
@@ -854,7 +885,7 @@ function App() {
                             }
                             const canSync = navigator.onLine && serverOnline;
                             try {
-                                if (canSync) await api.deleteOneOffTodo(id);
+                                if (canSync) { await api.deleteOneOffTodo(id); refreshRecommended(); }
                                 else {
                                     setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'delete' as const, id }]); saveOneOffPending(next); return next; });
                                 }
@@ -871,7 +902,7 @@ function App() {
                             });
                             const canSync = navigator.onLine && serverOnline;
                             try {
-                                if (canSync) await api.updateOneOffStatus(id, status);
+                                if (canSync) { await api.updateOneOffStatus(id, status); refreshRecommended(); }
                                 else {
                                     setOneOffPending(prev => { const next = compressOneOffOps([...prev, { kind: 'status' as const, id, status }]); saveOneOffPending(next); return next; });
                                 }
