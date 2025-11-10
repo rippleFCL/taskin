@@ -26,7 +26,9 @@ def get_dependency_graph(db: Session = Depends(get_db), graph_type: str = Query(
     categories = db.query(Category).all()
     oneoffs = db.query(OneOffTodo).filter(OneOffTodo.status != TaskStatus.complete).all()
     if graph_type == "scoped":
-        graph = dep_man.sub_graph
+        unready_todos = db.query(Todo.id).filter(Todo.reset_count > 0).all()
+        unready_ids = {tid for (tid,) in unready_todos}
+        graph = dep_man.scope_subgraph(unready_ids)
     else:
         graph = dep_man.full_graph
 

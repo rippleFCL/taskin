@@ -353,7 +353,6 @@ class DependencyManager:
         self.full_graph = Graph()
         self.todo_id_map: dict[str, int] = {}
         self.category_id_map: dict[str, int] = {}
-        self.sub_graph = Graph()
 
     def build_full_graph(self, categories: list[Category]):
         new_graph = Graph()
@@ -392,12 +391,12 @@ class DependencyManager:
         self.full_graph = new_graph
 
     def scope_subgraph(self, excluded_tids: set[int]):
-        self.sub_graph = self.full_graph.filter_out(excluded_tids)
-        if self.sub_graph.validate() is False:
+        sub_graph = self.full_graph.filter_out(excluded_tids)
+        if sub_graph.validate() is False:
             raise ValueError("Scoped subgraph is invalid after filtering")
-        if self.sub_graph.ddm != self.full_graph.ddm.filter(excluded_tids):
+        if sub_graph.ddm != self.full_graph.ddm.filter(excluded_tids):
             raise ValueError("Scoped subgraph DDM does not match filtered full graph DDM")
-
+        return sub_graph
 
 
 dep_man = DependencyManager(CONFIG)

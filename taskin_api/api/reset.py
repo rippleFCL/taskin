@@ -114,10 +114,8 @@ def reset_all_todos(db: Session = Depends(get_db)):
 
     db.commit()
 
-    unready_todos = db.query(Todo.id).filter(Todo.reset_count > 0).all()
-    unready_ids = {tid for (tid,) in unready_todos}
-    dep_man.scope_subgraph(unready_ids)
     
+
     return {
         "total": len(todos),
         "report_id": report.id,
