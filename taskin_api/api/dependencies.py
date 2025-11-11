@@ -1,3 +1,4 @@
+from datetime import datetime
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from models import TaskStatus, get_db, Category, Todo, OneOffTodo
@@ -15,7 +16,7 @@ router = APIRouter()
 
 
 @router.get("/dependency-graph", response_model=DependencyGraph)
-def get_dependency_graph(db: Session = Depends(get_db), graph_type: str = Query("scoped", enum=["full", "scoped"])):
+def get_dependency_graph(db: Session = Depends(get_db), graph_type: str = Query("scoped", enum=["full", "scoped"]), filter_time_deps: bool = Query(False)):
     """
     Get the complete dependency graph showing relationships between all todos.
     Returns nodes (todos and categories) and edges (dependency relationships).
@@ -32,6 +33,7 @@ def get_dependency_graph(db: Session = Depends(get_db), graph_type: str = Query(
     else:
         graph = dep_man.full_graph
 
+
     nodes: list[DependencyNode] = []
     edges: list[DependencyEdge] = []
     nid_categories: dict[int, str] = {}
@@ -41,11 +43,26 @@ def get_dependency_graph(db: Session = Depends(get_db), graph_type: str = Query(
     oneoff_id_map: dict[int, int] = {}
     todo_id_map: dict[int, int] = {}
     category_id_map: dict[int, int] = {}
+    current_time = datetime.now()
+    seconds_into_day = (current_time - current_time.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds()
 
+    filter_time_dep_ids: set[int] = set()
     # Add todo nodes
     for todo in todos:
         if todo.id not in graph.nodes:
             continue  # Skip todos not in the graph (e.g., completed todos)
+
+        time_dep = dep_man.time_dep_map[todo.id]
+        within_time_window = True
+        if time_dep.start is not None:
+            if seconds_into_day < time_dep.start:
+                within_time_window = False
+        if time_dep.end is not None:
+            if seconds_into_day > time_dep.end:
+                within_time_window = False
+        if filter_time_deps and not within_time_window:
+            filter_time_dep_ids.add(todo.id)
+            continue
         if todo.status == TaskStatus.complete:
             color = RGBColor(r=0, g=204, b=102)  # Green for completed
         elif todo.status == TaskStatus.in_progress:
@@ -53,6 +70,8 @@ def get_dependency_graph(db: Session = Depends(get_db), graph_type: str = Query(
             color = RGBColor(r=51, g=102, b=204)
         elif todo.status == TaskStatus.skipped:
             color = RGBColor(r=204, g=102, b=51)  # Orange for skipped
+        elif not within_time_window:
+            color = RGBColor(r=255, g=255, b=51)  # Yellow for out-of-time-window
         else:
             color = None
         nodes.append(
@@ -66,6 +85,10 @@ def get_dependency_graph(db: Session = Depends(get_db), graph_type: str = Query(
         nid_categories[nid] = todo.category.name if todo.category else "Uncategorised"
         todo_id_map[todo.id] = nid
         nid += 1
+
+    
+    if filter_time_deps:
+        graph = graph.filter_out(filter_time_dep_ids)
 
     # Add category nodes
     for category in categories:

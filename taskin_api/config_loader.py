@@ -17,12 +17,17 @@ class WarningConfig(BaseModel):
     weekly: WarningDataConfig
     daily: WarningDataConfig
 
+class TimeDependency(BaseModel):
+    start: int | None = None
+    end: int | None = None
+
 class TodoConfig(BaseModel):
     title: str
     description: str | None = None
     depends_on_todos: list[str] = Field(default_factory=list)
     depends_on_categories: list[str] = Field(default_factory=list)
     depends_on_all_oneoffs: bool = False
+    depends_on_time: TimeDependency = TimeDependency()
     reset_interval: int = 1  # Reset every N days (1 = daily)
 
 class CategoryConfig(BaseModel):

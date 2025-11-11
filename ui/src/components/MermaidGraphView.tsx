@@ -22,6 +22,10 @@ export default function MermaidGraphView() {
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [graphType, setGraphType] = useState<'scoped' | 'full'>('scoped');
+    const LS_FILTER_TIME_DEPS = 'taskin_graph_filter_time_deps';
+    const [filterTimeDeps, setFilterTimeDeps] = useState<boolean>(() => {
+        try { return localStorage.getItem(LS_FILTER_TIME_DEPS) === '1'; } catch { return false; }
+    });
     const containerRef = useRef<HTMLDivElement | null>(null);
     const [svg, setSvg] = useState<string>('');
     const panZoomRef = useRef<ReturnType<typeof svgPanZoom> | null>(null);
@@ -33,7 +37,7 @@ export default function MermaidGraphView() {
         setLoading(true);
         setError(null);
         try {
-            const g = await api.getDependencyGraph(graphType);
+            const g = await api.getDependencyGraph(graphType, filterTimeDeps);
             setGraph(g);
         } catch (e: any) {
             setError(e?.message || 'Failed to load dependency graph');
@@ -47,7 +51,7 @@ export default function MermaidGraphView() {
         load();
         const id = setInterval(load, 30000);
         return () => clearInterval(id);
-    }, [graphType]);
+    }, [graphType, filterTimeDeps]);
 
     // Build Mermaid code from API data
     const mermaidCode = useMemo(() => {
@@ -358,6 +362,19 @@ export default function MermaidGraphView() {
                     </button>
                 </div>
                 <div className="ml-auto flex items-center gap-2">
+                    <button
+                        onClick={() => {
+                            setFilterTimeDeps(prev => {
+                                const next = !prev;
+                                try { localStorage.setItem(LS_FILTER_TIME_DEPS, next ? '1' : '0'); } catch { }
+                                return next;
+                            });
+                        }}
+                        title={filterTimeDeps ? 'Showing graph with time deps filtered' : 'Including time-based dependencies'}
+                        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-md border text-xs ${filterTimeDeps ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-accent'}`}
+                    >
+                        {filterTimeDeps ? 'Time deps: filtered' : 'Time deps: included'}
+                    </button>
                     <button
                         onClick={() => panZoomRef.current?.zoomIn()}
                         title="Zoom in"

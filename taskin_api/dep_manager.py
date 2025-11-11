@@ -1,4 +1,4 @@
-from config_loader import CONFIG, AppConfig
+from config_loader import CONFIG, AppConfig, TimeDependency
 # from models import Category, Todo
 from dataclasses import dataclass
 
@@ -353,6 +353,7 @@ class DependencyManager:
         self.full_graph = Graph()
         self.todo_id_map: dict[str, int] = {}
         self.category_id_map: dict[str, int] = {}
+        self.time_dep_map: dict[int, TimeDependency] = {}
 
     def build_full_graph(self, categories: list[Category]):
         new_graph = Graph()
@@ -364,6 +365,7 @@ class DependencyManager:
         self.category_id_map = {category.name: category.id for category in categories}
         for category in self.config.categories:
             for todo in category.todos:
+                self.time_dep_map[self.todo_id_map[todo.title]] = todo.depends_on_time
                 todo_id = self.todo_id_map.get(todo.title)
                 if not todo_id:
                     continue

@@ -81,7 +81,19 @@ def get_recommended_todos(db: Session = Depends(get_db)):
     incomplete_todos = db.query(Todo).filter(Todo.status.in_([TaskStatus.incomplete, TaskStatus.in_progress])).all()
 
     # Get incomplete/in-progress todo IDs (these are blocking)
-    blocking_todo_ids = {todo.id for todo in incomplete_todos}
+    current_time = datetime.now()
+    seconds_into_day = (current_time - current_time.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds()
+
+    blocking_todo_ids = set()
+    for todo in incomplete_todos:
+        time_dep = dep_man.time_dep_map[todo.id]
+        if time_dep.start is not None:
+            if seconds_into_day < time_dep.start:
+                continue
+        if time_dep.end is not None:
+            if seconds_into_day > time_dep.end:
+                continue
+        blocking_todo_ids.add(todo.id)
 
     # Check if there are any incomplete oneoffs
     has_incomplete_oneoffs = db.query(OneOffTodo).filter(OneOffTodo.status != TaskStatus.complete).count() > 0
@@ -96,7 +108,7 @@ def get_recommended_todos(db: Session = Depends(get_db)):
         # Check if any of the dependencies are still incomplete
         incomplete_deps = all_deps & blocking_todo_ids
 
-        if incomplete_deps:
+        if incomplete_deps or todo.id not in blocking_todo_ids:
             # Has incomplete dependencies, not ready
             continue
 
@@ -106,6 +118,7 @@ def get_recommended_todos(db: Session = Depends(get_db)):
             if has_incomplete_oneoffs:
                 # Oneoffs not complete yet
                 continue
+        time_dep = dep_man.time_dep_map[todo.id]
 
         # All dependencies satisfied!
         recommended.append(todo)
