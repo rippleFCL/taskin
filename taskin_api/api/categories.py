@@ -1,13 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
 from models import get_db, Category
 from schemas import CategoryWithTodos
 
 router = APIRouter()
 
 
-@router.get("/categories", response_model=List[CategoryWithTodos])
+@router.get("/categories", response_model=list[CategoryWithTodos])
 def get_categories(db: Session = Depends(get_db)):
     """Get all categories with their todos"""
     categories = db.query(Category).all()

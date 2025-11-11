@@ -2,7 +2,6 @@ from __future__ import annotations
 import os
 
 import enum
-from typing import List, Optional
 from datetime import datetime, timezone
 
 from sqlalchemy import Enum as SAEnum, ForeignKey, String, create_engine, Integer, DateTime, Float
@@ -38,10 +37,10 @@ class Category(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String, unique=True, nullable=False, index=True)
-    description: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    description: Mapped[str | None] = mapped_column(String, nullable=True)
 
     # Relationship to todos
-    todos: Mapped[List["Todo"]] = relationship(back_populates="category", cascade="all, delete-orphan")
+    todos: Mapped[list["Todo"]] = relationship(back_populates="category", cascade="all, delete-orphan")
 
 
 class Todo(Base):
@@ -51,7 +50,7 @@ class Todo(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     title: Mapped[str] = mapped_column(String, nullable=False)
-    description: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    description: Mapped[str | None] = mapped_column(String, nullable=True)
     status: Mapped[TaskStatus] = mapped_column(SAEnum(TaskStatus), default=TaskStatus.incomplete, nullable=False)
     category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"), nullable=False)
     reset_interval: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
@@ -59,7 +58,7 @@ class Todo(Base):
     position: Mapped[int] = mapped_column(Integer, default=0, nullable=False)  # Position within category for implicit deps
 
     # Status transition tracking for statistics
-    in_progress_start: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)  # When task entered in-progress
+    in_progress_start: Mapped[datetime | None]  = mapped_column(DateTime, nullable=True)  # When task entered in-progress
     cumulative_in_progress_seconds: Mapped[float] = mapped_column(
         Float, default=0.0, nullable=False
     )  # Total time spent in-progress (cumulative across multiple sessions)
@@ -77,7 +76,7 @@ class OneOffTodo(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     title: Mapped[str] = mapped_column(String, nullable=False)
-    description: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    description: Mapped[str | None] = mapped_column(String, nullable=True)
     status: Mapped[TaskStatus] = mapped_column(SAEnum(TaskStatus), default=TaskStatus.incomplete, nullable=False)
 
 
@@ -97,7 +96,7 @@ class Report(Base):
     incomplete_todos: Mapped[int] = mapped_column(Integer, nullable=False)
 
     # Relationship to task reports
-    task_reports: Mapped[List["TaskReport"]] = relationship(back_populates="report", cascade="all, delete-orphan")
+    task_reports: Mapped[list["TaskReport"]] = relationship(back_populates="report", cascade="all, delete-orphan")
 
 
 class TaskReport(Base):
@@ -118,7 +117,7 @@ class TaskReport(Base):
     final_status: Mapped[TaskStatus] = mapped_column(SAEnum(TaskStatus), nullable=False)
 
     # Duration in seconds that the task was in-progress during this cycle (None if never entered in-progress)
-    in_progress_duration_seconds: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    in_progress_duration_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     # Relationship to reset report
     report: Mapped["Report"] = relationship(back_populates="task_reports")

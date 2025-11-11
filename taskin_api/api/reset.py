@@ -1,4 +1,6 @@
+from operator import le
 from fastapi import APIRouter, Depends
+import requests
 from sqlalchemy.orm import Session
 from datetime import datetime
 from models import (
@@ -8,8 +10,19 @@ from models import (
     Report,
     TaskReport,
 )
-from dep_manager import dep_man
+from config_loader import CONFIG
 router = APIRouter()
+
+
+def generate_aggregated_avg_comp_rate(reports: list[Report]) -> float:
+    """Helper to calculate average completion rate across reports"""
+    if not reports:
+        return 0.0
+    total_rate = 0.0
+    for report in reports:
+        if report.total_todos > 0:
+            total_rate += report.completed_todos / report.total_todos
+    return total_rate / len(reports)
 
 
 @router.post("/reset")
@@ -31,7 +44,7 @@ def reset_all_todos(db: Session = Depends(get_db)):
     # Create the reset report
     report = Report(
         created_at=datetime.now(),
-        total_todos=len(todos),
+        total_todos=len([todo for todo in todos if todo.reset_count == 0]),
         completed_todos=0,
         skipped_todos=0,
         incomplete_todos=0,
@@ -39,7 +52,7 @@ def reset_all_todos(db: Session = Depends(get_db)):
     db.add(report)
     db.flush()  # Get the report ID
     total_todos = 0
-    compleated_todos = 0
+    completed_todos = 0
     skipped_todos = 0
     incomplete_todos = 0
 
@@ -58,7 +71,7 @@ def reset_all_todos(db: Session = Depends(get_db)):
                 in_progress_duration = None
 
             if todo.status == TaskStatus.complete:
-                compleated_todos += 1
+                completed_todos += 1
                 final_status = TaskStatus.complete
             elif todo.status == TaskStatus.skipped:
                 skipped_todos += 1
@@ -108,13 +121,75 @@ def reset_all_todos(db: Session = Depends(get_db)):
         todo.in_progress_start = None
         todo.cumulative_in_progress_seconds = 0.0
 
-    report.completed_todos = compleated_todos
+    report.completed_todos = completed_todos
     report.skipped_todos = skipped_todos
     report.incomplete_todos = incomplete_todos
 
     db.commit()
 
-    
+    reports = (
+        db.query(Report)
+        .order_by(Report.created_at.desc())
+        .limit(30+1).all()
+    )
+    if CONFIG.warning:
+        daily_config = CONFIG.warning.daily
+        weekly_config = CONFIG.warning.weekly
+        last_week_avg_comp_rate = generate_aggregated_avg_comp_rate(reports[:7])*100
+        if last_week_avg_comp_rate < weekly_config.critical.threshold:
+            requests.post(str(weekly_config.webhook_url), json={
+                "message" : weekly_config.critical.message,
+                "average_completion_rate": f"{last_week_avg_comp_rate:.2f}%",
+                "color": "15548997"
+            }, timeout=5)
+        elif last_week_avg_comp_rate < weekly_config.warning.threshold:
+            requests.post(str(weekly_config.webhook_url), json={
+                "message" : weekly_config.warning.message,
+                "average_completion_rate": f"{last_week_avg_comp_rate:.2f}%",
+                "color": "15105570"
+            }, timeout=5)
+        else:
+            requests.post(str(weekly_config.webhook_url), json={
+                "message" : weekly_config.info_message,
+                "average_completion_rate": f"{last_week_avg_comp_rate:.2f}%",
+                "color": "5763719"
+            }, timeout=5)
+        if len(reports) >= 2:
+            last_month_avg_comp_rate = generate_aggregated_avg_comp_rate(reports[1:])*100
+            today_avg_comp_rate = generate_aggregated_avg_comp_rate(reports[:1])*100
+            if last_month_avg_comp_rate != 0:
+                percentage_change = (today_avg_comp_rate / last_month_avg_comp_rate - 1) * 100
+            else:
+                percentage_change = 0
+
+            if percentage_change < daily_config.critical.threshold:
+                requests.post(str(daily_config.webhook_url), json={
+                    "message" : daily_config.critical.message,
+                    "today_completion_rate": f"{today_avg_comp_rate:.2f}%",
+                    "percentage_change": f"{percentage_change:.2f}%",
+                    "month_avg_completion_rate": f"{last_month_avg_comp_rate:.2f}%",
+                    "color": "15548997"
+
+                }, timeout=5)
+            elif percentage_change < daily_config.warning.threshold:
+                requests.post(str(daily_config.webhook_url), json={
+                    "message" : daily_config.warning.message,
+                    "today_completion_rate": f"{today_avg_comp_rate:.2f}%",
+                    "percentage_change": f"{percentage_change:.2f}%",
+                    "month_avg_completion_rate": f"{last_month_avg_comp_rate:.2f}%",
+                    "color": "15105570"
+                }, timeout=5)
+            else:
+                requests.post(str(daily_config.webhook_url), json={
+                    "message" : daily_config.info_message,
+                    "today_completion_rate": f"{today_avg_comp_rate:.2f}%",
+                    "percentage_change": f"{percentage_change:.2f}%",
+                    "month_avg_completion_rate": f"{last_month_avg_comp_rate:.2f}%",
+                    "color": "5763719"
+                }, timeout=5)
+
+
+
 
     return {
         "total": len(todos),

@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from typing import List
 from models import datetime, get_db, Report, TaskStatus
 from schemas import (
     ResetReportResponse,
@@ -23,7 +22,7 @@ def get_report(start_date: datetime, end_date: datetime, db: Session = Depends(g
     return reports
 
 
-def generate_aggregated_statistics(reports: List[Report]) -> AggregatedStatistics:
+def generate_aggregated_statistics(reports: list[Report]) -> AggregatedStatistics:
     task_statistics_map: dict[tuple[str, str], TaskStatistics] = {}
     total_inprog_nz: dict[int, int] = {}
     for report in reports:
@@ -58,7 +57,7 @@ def generate_aggregated_statistics(reports: List[Report]) -> AggregatedStatistic
                     total_inprog_nz[task_report.todo_id] = 0
                 total_inprog_nz[task_report.todo_id] += 1
 
-    task_statistics: List[TaskStatistics] = []
+    task_statistics: list[TaskStatistics] = []
     for ts in task_statistics_map.values():
         # Calculate rates
         if ts.total_appearances > 0:

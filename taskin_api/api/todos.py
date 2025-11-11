@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
 from datetime import datetime
 from models import (
     OneOffTodo,
@@ -14,7 +13,7 @@ from dep_manager import dep_man
 router = APIRouter()
 
 
-@router.get("/todos", response_model=List[TodoWithCategory])
+@router.get("/todos", response_model=list[TodoWithCategory])
 def get_todos(status: TaskStatus | None = None, category_id: int | None = None, db: Session = Depends(get_db)):
     """Get all todos with optional filtering by status and category"""
     query = db.query(Todo)
@@ -64,7 +63,7 @@ def update_todo_status(todo_id: int, status: TaskStatus, db: Session = Depends(g
     return db_todo
 
 
-@router.get("/recommended-todos", response_model=List[TodoWithCategory])
+@router.get("/recommended-todos", response_model=list[TodoWithCategory])
 def get_recommended_todos(db: Session = Depends(get_db)):
     """
     Get todos that are ready to work on (all dependencies satisfied).

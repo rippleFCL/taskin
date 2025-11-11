@@ -1,31 +1,43 @@
 import os
-from typing import List, Optional
 
 import yaml
 from pydantic import BaseModel, Field, HttpUrl, ValidationError
 
+class WarningValueConfig(BaseModel):
+    threshold: int
+    message: str
+
+class WarningDataConfig(BaseModel):
+    info_message: str
+    warning: WarningValueConfig
+    critical: WarningValueConfig
+    webhook_url: HttpUrl
+
+class WarningConfig(BaseModel):
+    weekly: WarningDataConfig
+    daily: WarningDataConfig
 
 class TodoConfig(BaseModel):
     title: str
-    description: Optional[str] = None
-    depends_on_todos: List[str] = Field(default_factory=list)
-    depends_on_categories: List[str] = Field(default_factory=list)
+    description: str | None = None
+    depends_on_todos: list[str] = Field(default_factory=list)
+    depends_on_categories: list[str] = Field(default_factory=list)
     depends_on_all_oneoffs: bool = False
     reset_interval: int = 1  # Reset every N days (1 = daily)
 
-
 class CategoryConfig(BaseModel):
     name: str
-    description: Optional[str] = None
-    todos: List[TodoConfig] = Field(default_factory=list)
+    description: str | None = None
+    todos: list[TodoConfig] = Field(default_factory=list)
 
 class OneOffTodoConfig(BaseModel):
-    depends_on_todos: List[str] = Field(default_factory=list)
-    depends_on_categories: List[str] = Field(default_factory=list)
+    depends_on_todos: list[str] = Field(default_factory=list)
+    depends_on_categories: list[str] = Field(default_factory=list)
 
 class AppConfig(BaseModel):
-    webhook_url: Optional[HttpUrl] = None
-    categories: List[CategoryConfig] = Field(default_factory=list)
+    webhook_url: HttpUrl | None = None
+    warning: WarningConfig | None = None
+    categories: list[CategoryConfig] = Field(default_factory=list)
     oneoff_deps: OneOffTodoConfig = Field(default_factory=OneOffTodoConfig)
 
 _CONFIG_PATH: str = "config.yml"

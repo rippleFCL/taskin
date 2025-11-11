@@ -1,6 +1,6 @@
 from enum import Enum
 from pydantic import BaseModel, Field, ConfigDict
-from typing import Literal, Optional, List
+from typing import Literal
 from datetime import datetime
 from models import TaskStatus
 
@@ -15,7 +15,7 @@ class CategoryResponse(ORMModel):
     """Schema for category response"""
 
     name: str = Field(..., min_length=1, max_length=100)
-    description: Optional[str] = None
+    description: str | None = None
     id: int
 
 
@@ -24,7 +24,7 @@ class TodoResponse(ORMModel):
 
     id: int
     title: str
-    description: Optional[str]
+    description: str | None
     status: TaskStatus
     category_id: int
     in_progress_start: datetime | None = None
@@ -37,7 +37,7 @@ class TodoResponse(ORMModel):
 class CategoryWithTodos(CategoryResponse):
     """Schema for category with todos"""
 
-    todos: List[TodoResponse] = Field(default_factory=list)
+    todos: list[TodoResponse] = Field(default_factory=list)
 
 
 class TodoWithCategory(TodoResponse):
@@ -49,7 +49,7 @@ class TodoWithCategory(TodoResponse):
 # One-off todos
 class OneOffTodoBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)
-    description: Optional[str] = None
+    description: str | None = None
 
 
 class OneOffTodoCreate(OneOffTodoBase):
@@ -57,15 +57,15 @@ class OneOffTodoCreate(OneOffTodoBase):
 
 
 class OneOffTodoUpdate(BaseModel):
-    title: Optional[str] = Field(None, min_length=1, max_length=200)
-    description: Optional[str] = None
-    status: Optional[TaskStatus] = None
+    title: str | None = Field(None, min_length=1, max_length=200)
+    description: str | None = None
+    status: TaskStatus | None = None
 
 
 class OneOffTodoResponse(ORMModel):
     id: int
     title: str
-    description: Optional[str]
+    description: str | None
     status: TaskStatus
 
 
@@ -89,7 +89,7 @@ class DependencyNode(BaseModel):
     id: int
     title: str
     node_type: NodeType
-    boarder_color: Optional[RGBColor] = None
+    boarder_color: RGBColor | None = None
 
 
 class DependencyEdge(BaseModel):
@@ -102,8 +102,8 @@ class DependencyEdge(BaseModel):
 class DependencyGraph(BaseModel):
     """Complete dependency graph with nodes and edges"""
 
-    nodes: List[DependencyNode]
-    edges: List[DependencyEdge]
+    nodes: list[DependencyNode]
+    edges: list[DependencyEdge]
     node_category_map: dict[int, str | Literal["Uncategorised"]]
 
 
@@ -116,7 +116,7 @@ class TaskReportResponse(ORMModel):
     todo_title: str
     category_name: str
     final_status: TaskStatus
-    in_progress_duration_seconds: Optional[float]
+    in_progress_duration_seconds: float | None
 
 
 class ResetReportResponse(ORMModel):
@@ -128,7 +128,7 @@ class ResetReportResponse(ORMModel):
     completed_todos: int
     skipped_todos: int
     incomplete_todos: int
-    task_reports: List[TaskReportResponse] = Field(default_factory=list)
+    task_reports: list[TaskReportResponse] = Field(default_factory=list)
 
 
 class TaskStatistics(BaseModel):
@@ -141,7 +141,7 @@ class TaskStatistics(BaseModel):
     # Metrics
     completion_rate: float  # Percentage of reports where task was completed (0-100)
     skip_rate: float  # Percentage of reports where task was skipped (0-100)
-    avg_in_progress_duration_seconds: Optional[float]  # Average time spent in-progress when it was used
+    avg_in_progress_duration_seconds: float | None  # Average time spent in-progress when it was used
 
     # Raw counts
     total_appearances: int
@@ -156,4 +156,4 @@ class AggregatedStatistics(BaseModel):
     """Overall aggregated statistics across all tasks and reports"""
 
     report_count: int  # Number of reports analyzed
-    task_statistics: List[TaskStatistics]  # Per-task breakdown
+    task_statistics: list[TaskStatistics]  # Per-task breakdown

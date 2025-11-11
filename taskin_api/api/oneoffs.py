@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
-from typing import List
 import json
 from urllib import request as urlrequest
 from urllib.error import URLError, HTTPError
@@ -24,7 +23,7 @@ def _post_webhook(url: str, body: dict):
         pass
 
 
-@router.get("/oneoff-todos", response_model=List[OneOffTodoResponse])
+@router.get("/oneoff-todos", response_model=list[OneOffTodoResponse])
 def list_oneoff_todos(db: Session = Depends(get_db)):
     """List all one-off todos."""
     return db.query(OneOffTodo).all()
@@ -101,7 +100,7 @@ def update_oneoff_status(oneoff_id: int, status: TaskStatus, db: Session = Depen
     return item
 
 
-@router.get("/recommended-oneoffs", response_model=List[OneOffTodoResponse])
+@router.get("/recommended-oneoffs", response_model=list[OneOffTodoResponse])
 def get_recommended_oneoff_todos(db: Session = Depends(get_db)):
     """Get recommended one-off todos using the DDM for efficient dependency lookup."""
     # Get all incomplete/in-progress todo IDs (these are blocking)
