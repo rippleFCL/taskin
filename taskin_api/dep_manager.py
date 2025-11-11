@@ -1,3 +1,4 @@
+from calendar import c
 from config_loader import CONFIG, AppConfig, TimeDependency
 # from models import Category, Todo
 from dataclasses import dataclass
@@ -201,10 +202,39 @@ class Graph:
         for cat_dep in self.nodes[current_tid].cat_dependencies:
             if cat_dep in filter_cat:
                 continue
-            for cat_dep_tid in self.categories[cat_dep].dependencies:
-                filtered.update(self._filtered_ddm(cat_dep_tid, set(), set())) # dont filter nodes above you
-                filtered.add(cat_dep_tid)
+            filtered.update(self._filtered_ddm_category(cat_dep, set()))
         return filtered
+
+    def _filtered_ddm_category(self, current_cid, filter_tid: set[int]) -> set[int]:
+        """Filters the deep dependency map based on a set of todo IDs
+        """
+        filtered: set[int] = set()
+        for tid in self.categories[current_cid].dependencies:
+            if tid in filter_tid:
+                continue
+            filtered.update(self._filtered_ddm(tid, set(), set()))
+            filtered.add(tid)
+        return filtered
+
+    def _dedupe_category(self, cid: int):
+        """Remove dependency nodes that can be reached through other paths
+        """
+        node = self.categories[cid]
+        to_remove: set[int] = set()
+        category_deps = set[int]()
+        for cat_dep in node.dependencies:
+            category_deps.update(self.ddm.get_deps(cat_dep))
+            category_deps.add(cat_dep)
+        for dep in node.dependencies:
+            # Get filtered deep dependency map for this dependency
+            filtered_deps = self._filtered_ddm_category(cid, {dep})
+            if filtered_deps == category_deps:
+                to_remove.add(dep)
+        for rem in to_remove:
+            node.dependencies.remove(rem)
+            self.nodes[rem].cat_dependant = None
+        for dept in list(node.dependants):
+            self._dedupe_node(dept)
 
     def _dedupe_node(self, tid: int):
         """Remove dependency nodes that can be reached through other paths
@@ -232,8 +262,7 @@ class Graph:
         for dept in list(node.dependants):
             self._dedupe_node(dept)
         if node.cat_dependant is not None:
-            for dept in self.categories[node.cat_dependant].dependants.copy():
-                self._dedupe_node(dept)
+            self._dedupe_category(node.cat_dependant)
 
     def dedupe(self):
         """remove dependency nodes that can be reached through other paths"""
