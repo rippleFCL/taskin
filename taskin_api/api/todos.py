@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime
 from models import (
+    Event,
     OneOffTodo,
     get_db,
     Todo,
@@ -9,6 +10,7 @@ from models import (
 )
 from schemas import TodoResponse, TodoWithCategory
 from dep_manager import dep_man
+from config_loader import TimeDependency
 
 router = APIRouter()
 
@@ -62,6 +64,15 @@ def update_todo_status(todo_id: int, status: TaskStatus, db: Session = Depends(g
     db.refresh(db_todo)
     return db_todo
 
+def in_timeslot(time_dependency: TimeDependency, current_seconds: float) -> bool:
+    """Check if the current time in seconds is within the time dependency slot."""
+    if time_dependency.start is not None:
+        if current_seconds < time_dependency.start:
+            return False
+    if time_dependency.end is not None:
+        if current_seconds > time_dependency.end:
+            return False
+    return True
 
 @router.get("/recommended-todos", response_model=list[TodoWithCategory])
 def get_recommended_todos(db: Session = Depends(get_db)):
@@ -87,13 +98,18 @@ def get_recommended_todos(db: Session = Depends(get_db)):
     blocking_todo_ids = set()
     for todo in incomplete_todos:
         time_dep = dep_man.time_dep_map[todo.id]
-        if time_dep.start is not None:
-            if seconds_into_day < time_dep.start:
-                continue
-        if time_dep.end is not None:
-            if seconds_into_day > time_dep.end:
-                continue
-        blocking_todo_ids.add(todo.id)
+        if not in_timeslot(time_dep, seconds_into_day):
+            continue
+        time_deps = dep_man.event_dep_map.get(todo.id, {})
+        for event_name, tdep in time_deps.items():
+            event = db.query(Event).filter(Event.name == event_name).first()
+            if event:
+                seconds_since_event = (current_time - event.timestamp).total_seconds()
+                if not in_timeslot(tdep, seconds_since_event):
+                    break
+        else:
+            blocking_todo_ids.add(todo.id)
+
 
     # Check if there are any incomplete oneoffs
     has_incomplete_oneoffs = db.query(OneOffTodo).filter(OneOffTodo.status != TaskStatus.complete).count() > 0

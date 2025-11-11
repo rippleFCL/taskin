@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from db_init import initialize_database
-from api import categories, todos, oneoffs, dependencies, reports, reset
+from api import categories, todos, oneoffs, dependencies, reports, reset, events
 import structlog
 
 # Configure logging
@@ -68,7 +68,7 @@ api.include_router(oneoffs.router, prefix="/api", tags=["oneoffs"])
 api.include_router(dependencies.router, prefix="/api", tags=["dependencies"])
 api.include_router(reports.router, prefix="/api", tags=["reports"])
 api.include_router(reset.router, prefix="/api", tags=["reset"])
-
+api.include_router(events.router, prefix="/api", tags=["events"])
 
 @api.get("/api/health")
 def health_check():

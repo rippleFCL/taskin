@@ -66,6 +66,15 @@ class Todo(Base):
     # Relationship to category
     category: Mapped["Category"] = relationship(back_populates="todos")
 
+class Event(Base):
+    """Event model for logging significant actions"""
+
+    __tablename__ = "events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now())
+
 class OneOffTodo(Base):
     """A simple one-off todo with only a title and description.
 

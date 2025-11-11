@@ -1,7 +1,7 @@
 from datetime import datetime
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-from models import TaskStatus, get_db, Category, Todo, OneOffTodo
+from models import Event, TaskStatus, get_db, Category, Todo, OneOffTodo
 from schemas import (
     DependencyGraph,
     DependencyNode,
@@ -10,9 +10,20 @@ from schemas import (
     RGBColor,
 )
 from dep_manager import dep_man
+from config_loader import TimeDependency
 
 
 router = APIRouter()
+
+def in_timeslot(time_dependency: TimeDependency, current_seconds: float) -> bool:
+    """Check if the current time in seconds is within the time dependency slot."""
+    if time_dependency.start is not None:
+        if current_seconds < time_dependency.start:
+            return False
+    if time_dependency.end is not None:
+        if current_seconds > time_dependency.end:
+            return False
+    return True
 
 
 @router.get("/dependency-graph", response_model=DependencyGraph)
@@ -54,13 +65,18 @@ def get_dependency_graph(db: Session = Depends(get_db), graph_type: str = Query(
 
         time_dep = dep_man.time_dep_map[todo.id]
         within_time_window = True
-        if time_dep.start is not None:
-            if seconds_into_day < time_dep.start:
-                within_time_window = False
-        if time_dep.end is not None:
-            if seconds_into_day > time_dep.end:
-                within_time_window = False
-        if filter_time_deps and not within_time_window:
+        time_dep = dep_man.time_dep_map[todo.id]
+        if not in_timeslot(time_dep, seconds_into_day):
+            within_time_window = False
+        time_deps = dep_man.event_dep_map.get(todo.id, {})
+        for event_name, tdep in time_deps.items():
+            event = db.query(Event).filter(Event.name == event_name).first()
+            if event:
+                seconds_since_event = (current_time - event.timestamp).total_seconds()
+                if not in_timeslot(tdep, seconds_since_event):
+                    within_time_window = False
+
+        if filter_time_deps and not within_time_window and todo.status not in (TaskStatus.complete, TaskStatus.skipped):
             filter_time_dep_ids.add(todo.id)
             continue
         if todo.status == TaskStatus.complete:
@@ -86,7 +102,7 @@ def get_dependency_graph(db: Session = Depends(get_db), graph_type: str = Query(
         todo_id_map[todo.id] = nid
         nid += 1
 
-    
+
     if filter_time_deps:
         graph = graph.filter_out(filter_time_dep_ids)
 

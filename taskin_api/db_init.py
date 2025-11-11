@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from models import Category, Todo, TaskStatus, SessionLocal
+from models import Category, Event, Todo, TaskStatus, SessionLocal
 from dep_manager import dep_man
 from config_loader import CONFIG, CategoryConfig, TodoConfig
 from alembic.config import Config
@@ -22,7 +22,7 @@ def sync_db_from_config(db: Session):
     # Build a map of config data for efficient lookup
     config_categories: dict[str, CategoryConfig] = {}
     config_todos: dict[tuple[str, str], TodoConfig] = {}  # key: (category_name, todo_title)
-
+    config_event_names: set[str] = set()
     for category_data in config.categories:
         category_name = category_data.name
         config_categories[category_name] = category_data
@@ -30,10 +30,13 @@ def sync_db_from_config(db: Session):
         for todo_data in category_data.todos:
             key = (category_name, todo_data.title)
             config_todos[key] = todo_data
+            for event_data in todo_data.depends_on_events.keys():
+                config_event_names.add(event_data)
 
     # Get existing data from database
     existing_categories = {cat.name: cat for cat in db.query(Category).all()}
     existing_todos: dict[tuple[str, str], Todo] = {}  # key: (category_name, todo_title) -> todo object
+    existing_events = {event.name: event for event in db.query(Event).all()}
 
     for todo in db.query(Todo).all():
         category = db.query(Category).filter(Category.id == todo.category_id).first()
@@ -87,6 +90,19 @@ def sync_db_from_config(db: Session):
             )
             db.add(todo)
 
+    for event_name in config_event_names:
+        if event_name not in existing_events:
+            event = Event(name=event_name)
+            db.add(event)
+
+    stale_events = []
+    for event_name, event in existing_events.items():
+        if event_name not in config_event_names:
+            stale_events.append(event)
+
+    for event in stale_events:
+        db.delete(event)
+
     # 3. Remove stale todos (in DB but not in config)
     stale_todos = []
     for key, todo in existing_todos.items():
@@ -112,9 +128,9 @@ def sync_db_from_config(db: Session):
         print(f"Removed {len(stale_categories)} stale category/categories")
 
     db.commit()
-    print(f"Database synced with config: {len(config_categories)} categories, {len(config_todos)} todos")
+    print(f"Database synced with config: {len(config_categories)} categories, {len(config_todos)} todos, {len(config_event_names)} events")
 
-    dep_man.build_full_graph(categories=db.query(Category).all())
+    dep_man.load_from_db(categories=db.query(Category).all(), events=db.query(Event).all())
 
     unready_todos = db.query(Todo.id).filter(Todo.reset_count > 0).all()
     unready_ids = {tid for (tid,) in unready_todos}

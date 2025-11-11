@@ -2,7 +2,7 @@ from config_loader import CONFIG, AppConfig, TimeDependency
 # from models import Category, Todo
 from dataclasses import dataclass
 
-from models import Category
+from models import Category, Event
 
 @dataclass
 class TodoNode:
@@ -354,8 +354,13 @@ class DependencyManager:
         self.todo_id_map: dict[str, int] = {}
         self.category_id_map: dict[str, int] = {}
         self.time_dep_map: dict[int, TimeDependency] = {}
+        self.event_dep_map: dict[int, dict[str, TimeDependency]] = {}
+        self.event_id_map: dict[str, int] = {}
 
-    def build_full_graph(self, categories: list[Category]):
+    def load_from_db(self, categories: list[Category], events: list[Event]):
+        for event in events:
+            self.event_id_map[event.name] = event.id
+
         new_graph = Graph()
         for category in categories:
             for todo in category.todos:
@@ -365,10 +370,17 @@ class DependencyManager:
         self.category_id_map = {category.name: category.id for category in categories}
         for category in self.config.categories:
             for todo in category.todos:
-                self.time_dep_map[self.todo_id_map[todo.title]] = todo.depends_on_time
+
                 todo_id = self.todo_id_map.get(todo.title)
                 if not todo_id:
                     continue
+                self.time_dep_map[self.todo_id_map[todo.title]] = todo.depends_on_time
+                for dep_event, time_dep in todo.depends_on_events.items():
+                    event_id = self.event_id_map.get(dep_event)
+                    if event_id:
+                        if todo_id not in self.event_dep_map:
+                            self.event_dep_map[todo_id] = {}
+                        self.event_dep_map[todo_id][dep_event] = time_dep
                 for dep in todo.depends_on_todos:
                     dep_id = self.todo_id_map.get(dep)
                     if dep_id:
