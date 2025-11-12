@@ -1,5 +1,5 @@
 import { TodoWithCategory, TaskStatus, OneOffTodo } from '../types';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '../components/ui/button';
 import { cn } from '../lib/utils';
 import { statusButtonClasses, statusBadgeClasses } from '../lib/utils';
@@ -62,6 +62,51 @@ export default function RecommendedPage({ todos, oneOffs = [], onStatusChange, o
         );
     }
 
+    // Group todos: incomplete on top, others at bottom
+    const incompleteTodos = useMemo(() => todos.filter(t => t.status === 'incomplete'), [todos]);
+    const otherTodos = useMemo(() => todos.filter(t => t.status !== 'incomplete'), [todos]);
+
+    const renderTodoCard = (todo: TodoWithCategory) => {
+        const statuses: TaskStatus[] = ['incomplete', 'in-progress', 'complete', 'skipped'];
+        return (
+            <div key={todo.id} className="p-4 bg-muted/50 rounded-lg border">
+                <div className="flex items-start gap-2 mb-2">
+                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-primary text-primary-foreground">
+                        {todo.category.name}
+                    </span>
+                    <h4 className="font-medium flex-1 flex items-center gap-2">
+                        {todo.title}
+                        <span className={cn('inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-md', statusBadgeClasses[todo.status])}>
+                            {todo.status === 'in-progress' ? 'In Progress' : todo.status === 'complete' ? 'Complete' : todo.status === 'skipped' ? 'Skipped' : 'Incomplete'}
+                        </span>
+                        <TimerChip cumulativeSeconds={Number((todo as any).cumulative_in_progress_seconds || 0)} startIso={(todo as any).in_progress_start as string | undefined} running={todo.status === 'in-progress'} />
+                    </h4>
+                </div>
+                {todo.description && (
+                    <p className="text-sm text-muted-foreground mb-3">{todo.description}</p>
+                )}
+                <div className="flex flex-wrap gap-2">
+                    {statuses.filter(s => s !== todo.status).map(s => {
+                        const common = `border`;
+                        const classes = cn('flex items-center gap-1.5', common, statusButtonClasses[s]);
+                        if (s === 'incomplete') return (
+                            <Button key={s} size="sm" variant="outline" className={classes} onClick={() => onStatusChange(todo.id, 'incomplete')} aria-label="Mark as incomplete"><Circle className="w-4 h-4 sm:mr-2 shrink-0" /><span className="hidden sm:inline">Incomplete</span></Button>
+                        );
+                        if (s === 'in-progress') return (
+                            <Button key={s} size="sm" variant="outline" className={classes} onClick={() => onStatusChange(todo.id, 'in-progress')} aria-label="Mark as in progress"><CircleDashed className="w-4 h-4 sm:mr-2 shrink-0" /><span className="hidden sm:inline">In Progress</span></Button>
+                        );
+                        if (s === 'complete') return (
+                            <Button key={s} size="sm" variant="outline" className={classes} onClick={() => onStatusChange(todo.id, 'complete')} aria-label="Mark as complete"><Check className="w-4 h-4 sm:mr-2 shrink-0" /><span className="hidden sm:inline">Complete</span></Button>
+                        );
+                        return (
+                            <Button key={s} size="sm" variant="outline" className={classes} onClick={() => onStatusChange(todo.id, 'skipped')} aria-label="Mark as skipped"><SkipForward className="w-4 h-4 sm:mr-2 shrink-0" /><span className="hidden sm:inline">Skip</span></Button>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className="bg-background rounded-lg border shadow-sm p-6">
             <p className="text-sm text-muted-foreground text-center mb-6">
@@ -69,46 +114,18 @@ export default function RecommendedPage({ todos, oneOffs = [], onStatusChange, o
             </p>
             {/* Recommended regular todos */}
             <div className="space-y-3">
-                {todos.map(todo => {
-                    const statuses: TaskStatus[] = ['incomplete', 'in-progress', 'complete', 'skipped'];
-                    return (
-                        <div key={todo.id} className="p-4 bg-muted/50 rounded-lg border">
-                            <div className="flex items-start gap-2 mb-2">
-                                <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-primary text-primary-foreground">
-                                    {todo.category.name}
-                                </span>
-                                <h4 className="font-medium flex-1 flex items-center gap-2">
-                                    {todo.title}
-                                    <span className={cn('inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-md', statusBadgeClasses[todo.status])}>
-                                        {todo.status === 'in-progress' ? 'In Progress' : todo.status === 'complete' ? 'Complete' : todo.status === 'skipped' ? 'Skipped' : 'Incomplete'}
-                                    </span>
-                                    <TimerChip cumulativeSeconds={Number((todo as any).cumulative_in_progress_seconds || 0)} startIso={(todo as any).in_progress_start as string | undefined} running={todo.status === 'in-progress'} />
-                                </h4>
-                            </div>
-                            {todo.description && (
-                                <p className="text-sm text-muted-foreground mb-3">{todo.description}</p>
-                            )}
-                            <div className="flex flex-wrap gap-2">
-                                {statuses.filter(s => s !== todo.status).map(s => {
-                                    const common = `border`;
-                                    const classes = cn('flex items-center gap-1.5', common, statusButtonClasses[s]);
-                                    if (s === 'incomplete') return (
-                                        <Button key={s} size="sm" variant="outline" className={classes} onClick={() => onStatusChange(todo.id, 'incomplete')} aria-label="Mark as incomplete"><Circle className="w-4 h-4 sm:mr-2 shrink-0" /><span className="hidden sm:inline">Incomplete</span></Button>
-                                    );
-                                    if (s === 'in-progress') return (
-                                        <Button key={s} size="sm" variant="outline" className={classes} onClick={() => onStatusChange(todo.id, 'in-progress')} aria-label="Mark as in progress"><CircleDashed className="w-4 h-4 sm:mr-2 shrink-0" /><span className="hidden sm:inline">In Progress</span></Button>
-                                    );
-                                    if (s === 'complete') return (
-                                        <Button key={s} size="sm" variant="outline" className={classes} onClick={() => onStatusChange(todo.id, 'complete')} aria-label="Mark as complete"><Check className="w-4 h-4 sm:mr-2 shrink-0" /><span className="hidden sm:inline">Complete</span></Button>
-                                    );
-                                    return (
-                                        <Button key={s} size="sm" variant="outline" className={classes} onClick={() => onStatusChange(todo.id, 'skipped')} aria-label="Mark as skipped"><SkipForward className="w-4 h-4 sm:mr-2 shrink-0" /><span className="hidden sm:inline">Skip</span></Button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    );
-                })}
+                {incompleteTodos.map(renderTodoCard)}
+
+                {/* Divider between incomplete and others */}
+                {incompleteTodos.length > 0 && otherTodos.length > 0 && (
+                    <div className="flex items-center my-2 gap-2">
+                        <div className="h-px bg-border flex-1" />
+                        <span className="text-xs text-muted-foreground">In-Progress</span>
+                        <div className="h-px bg-border flex-1" />
+                    </div>
+                )}
+
+                {otherTodos.map(renderTodoCard)}
             </div>
 
             {/* Recommended one-off todos */}
