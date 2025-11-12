@@ -44,6 +44,7 @@ class OneOffTodoConfig(BaseModel):
     depends_on_categories: list[str] = Field(default_factory=list)
 
 class AppConfig(BaseModel):
+    notification_webhook_url: HttpUrl | None = None
     webhook_url: HttpUrl | None = None
     warning: WarningConfig | None = None
     categories: list[CategoryConfig] = Field(default_factory=list)

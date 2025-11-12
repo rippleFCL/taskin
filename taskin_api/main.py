@@ -1,10 +1,13 @@
 import os
+import asyncio
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from db_init import initialize_database
 from api import categories, todos, oneoffs, dependencies, reports, reset, events
+from notifier_service import notifier
 import structlog
 
 # Configure logging
@@ -46,11 +49,36 @@ structlog.configure_once(
 logger = structlog.stdlib.get_logger().bind(module="server")
 
 
-# Initialize database on startup
-initialize_database()
+# Lifespan context manager for startup and shutdown events
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage application lifespan - startup and shutdown."""
+    # Startup
+    initialize_database()
 
-# Create FastAPI app
-api = FastAPI(title="Taskin API", description="A simple todo API with categories and SQLite storage", version="0.1.0")
+    # Start the notifier service in the background
+    notifier_task = asyncio.create_task(notifier.run())
+    logger.info("Background notifier service started")
+
+    yield
+
+    # Shutdown
+    notifier.stop()
+    notifier_task.cancel()
+    try:
+        await notifier_task
+    except asyncio.CancelledError:
+        pass
+    logger.info("Background notifier service stopped")
+
+
+# Create FastAPI app with lifespan
+api = FastAPI(
+    title="Taskin API",
+    description="A simple todo API with categories and SQLite storage",
+    version="0.1.0",
+    lifespan=lifespan
+)
 
 # Configure CORS
 api.add_middleware(
