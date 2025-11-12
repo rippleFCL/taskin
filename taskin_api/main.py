@@ -1,7 +1,8 @@
 import os
 import asyncio
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, Header
+from typing import Any
+from fastapi import FastAPI, HTTPException, Header, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -103,14 +104,23 @@ def health_check():
     """Health check endpoint"""
     return {"status": "healthy"}
 
+class SPAStaticFiles(StaticFiles):
+    async def get_response(self, path: str, scope: Any) -> Response:
+        assert isinstance(self.directory, str), "Static directory must be a string"
+
+        full_path = os.path.join(self.directory, path)
+
+        # If the file exists, serve it
+        if os.path.isfile(full_path):
+            return await super().get_response(path, scope)
+
+        # If the file does NOT exist, serve `index.html`
+        return await super().get_response("index.html", scope)
+
+
 
 if os.path.exists("static"):
-    api.mount("/assets", StaticFiles(directory="static/assets", html=True), name="static")
+    api.mount("/", SPAStaticFiles(directory="static/", html=True), name="static")
 
-    @api.get("/{full_path:path}")
-    async def catch_all(full_path: str, accept: str = Header(default="")):
-        if accept and "text/html" not in accept:
-            return HTTPException(status_code=404, detail="Not Found")
-        return FileResponse("static/index.html")
 else:
     logger.warning("Static directory 'static/assets' does not exist.")
