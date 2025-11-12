@@ -1,4 +1,4 @@
-import { CategoryWithTodos, TaskStatus } from '../types';
+import { CategoryWithTodos, TaskStatus, Timeslot } from '../types';
 import { Card, CardContent } from '../components/ui/card';
 import { CategoryCard } from '../components/CategoryCard';
 import { Check, Circle, CircleDashed, SkipForward } from 'lucide-react';
@@ -18,9 +18,10 @@ interface Props {
     categories: CategoryWithTodos[];
     summary: AllSummary;
     onStatusChange: (id: number, status: TaskStatus) => void;
+    timeslots?: Record<number, Timeslot>;
 }
 
-export default function AllTasksPage({ categories, summary, onStatusChange }: Props) {
+export default function AllTasksPage({ categories, summary, onStatusChange, timeslots }: Props) {
     return (
         <div className="space-y-4">
             {/* Summary bar */}
@@ -92,6 +93,7 @@ export default function AllTasksPage({ categories, summary, onStatusChange }: Pr
                         key={category.id}
                         category={category}
                         onStatusChange={onStatusChange}
+                        timeslots={timeslots}
                     />
                 ))
             )}

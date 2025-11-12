@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CategoryWithTodos, TaskStatus } from '../types';
+import { CategoryWithTodos, TaskStatus, Timeslot } from '../types';
 import { TodoItem } from './TodoItem';
 // TODO: Consider refactoring TodoItem to reuse new TimerChip logic using in_progress_start across pages.
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
@@ -10,9 +10,10 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 interface CategoryCardProps {
     category: CategoryWithTodos;
     onStatusChange: (id: number, status: TaskStatus) => void;
+    timeslots?: Record<number, Timeslot>;
 }
 
-export function CategoryCard({ category, onStatusChange }: CategoryCardProps) {
+export function CategoryCard({ category, onStatusChange, timeslots }: CategoryCardProps) {
     const [open, setOpen] = useState(true);
     const [tab, setTab] = useState<'open' | 'completed' | 'skipped'>('open');
 
@@ -127,6 +128,7 @@ export function CategoryCard({ category, onStatusChange }: CategoryCardProps) {
                                             key={todo.id}
                                             todo={todo}
                                             onStatusChange={onStatusChange}
+                                            timeslot={timeslots ? timeslots[todo.id] : undefined}
                                         />
                                     ))}
                                 </div>
@@ -141,6 +143,7 @@ export function CategoryCard({ category, onStatusChange }: CategoryCardProps) {
                                             key={todo.id}
                                             todo={todo}
                                             onStatusChange={onStatusChange}
+                                            timeslot={timeslots ? timeslots[todo.id] : undefined}
                                         />
                                     ))}
                                 </div>
@@ -154,6 +157,7 @@ export function CategoryCard({ category, onStatusChange }: CategoryCardProps) {
                                         key={todo.id}
                                         todo={todo}
                                         onStatusChange={onStatusChange}
+                                        timeslot={timeslots ? timeslots[todo.id] : undefined}
                                     />
                                 ))}
                             </div>

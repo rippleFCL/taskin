@@ -8,12 +8,18 @@ from models import (
     Todo,
     TaskStatus,
 )
-from schemas import TodoResponse, TodoWithCategory
+from schemas import Timeslot, TodoResponse, TodoWithCategory
 from dep_manager import dep_man
 from config_loader import TimeDependency
 
 router = APIRouter()
 
+@router.get("/timeslots", response_model=dict[int, Timeslot])
+def get_timeslots(db: Session = Depends(get_db)):
+    """Get the timeslots for todos with time dependencies"""
+    events = db.query(Event).all()
+    todo_timeslots = dep_man.get_timeslots(events)
+    return todo_timeslots
 
 @router.get("/todos", response_model=list[TodoWithCategory])
 def get_todos(status: TaskStatus | None = None, category_id: int | None = None, db: Session = Depends(get_db)):

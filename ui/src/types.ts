@@ -103,3 +103,11 @@ export interface AggregatedStatistics {
   report_count: number;
   task_statistics: TaskStatistics[];
 }
+
+// Timeslot types
+export interface Timeslot {
+  // ISO datetime boundaries; either may be null. If both null, not happening today.
+  // Can span multiple days; UI shows "DD Mon HH:MM–DD Mon HH:MM" and uses ellipses for open ends.
+  start: string | null;
+  end: string | null;
+}

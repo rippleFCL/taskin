@@ -1,9 +1,11 @@
-from calendar import c
 from config_loader import CONFIG, AppConfig, TimeDependency
 # from models import Category, Todo
 from dataclasses import dataclass
 
 from models import Category, Event
+from schemas import Timeslot
+
+import datetime
 
 @dataclass
 class TodoNode:
@@ -385,6 +387,60 @@ class DependencyManager:
         self.time_dep_map: dict[int, TimeDependency] = {}
         self.event_dep_map: dict[int, dict[str, TimeDependency]] = {}
         self.event_id_map: dict[str, int] = {}
+
+    def get_timeslots(self, events: list[Event]):
+        todo_timeslot: dict[int, Timeslot] = {}
+        event_time_map = {event.name: event.timestamp for event in events}
+        for category in self.config.categories:
+            for todo in category.todos:
+                todo_id = self.todo_id_map.get(todo.title)
+                if not todo_id:
+                    continue
+                time_dep = todo.depends_on_time
+                if not ((time_dep.start or time_dep.end) or todo.depends_on_events):
+                    continue
+
+                now = datetime.datetime.now()
+                start_time = now.replace(hour=0, minute=0, second=0, microsecond=0)
+                time_slot_start = None
+                time_slot_end = None
+                if time_dep:
+                    if time_dep.start is not None:
+                        dep_start = start_time + datetime.timedelta(seconds=time_dep.start%86400)
+                        if time_slot_start is None or dep_start > time_slot_start:
+                            time_slot_start = dep_start
+                    if time_dep.end is not None:
+                        dep_end = start_time + datetime.timedelta(seconds=time_dep.end%86400)
+                        if time_slot_end is None or dep_end < time_slot_end:
+                            time_slot_end = dep_end
+
+                for event_name, event_time_dep in todo.depends_on_events.items():
+                    event_timestamp = event_time_map.get(event_name)
+                    if not event_timestamp:
+                        continue
+
+                    if event_time_dep.start is not None:
+                        dep_start = event_timestamp + datetime.timedelta(seconds=event_time_dep.start%86400)
+                        if time_slot_start is None or dep_start > time_slot_start:
+                            time_slot_start = dep_start
+
+                    if event_time_dep.end is not None:
+                        dep_end = event_timestamp + datetime.timedelta(seconds=event_time_dep.end%86400)
+                        if time_slot_end is None or dep_end < time_slot_end:
+                            time_slot_end = dep_end
+
+                todo_timeslot[todo_id] = Timeslot(
+                    start=time_slot_start,
+                    end=time_slot_end
+                )
+                if time_slot_start and time_slot_end and time_slot_start >= time_slot_end:
+                    todo_timeslot[todo_id] = Timeslot(
+                        start=None,
+                        end=None
+                    )
+
+        return todo_timeslot
+
 
     def load_from_db(self, categories: list[Category], events: list[Event]):
         for event in events:

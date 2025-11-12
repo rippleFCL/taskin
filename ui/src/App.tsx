@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useLocation, useNavigate, Routes, Route, Navigate } from 'react-router-dom';
-import { CategoryWithTodos, TodoWithCategory, TaskStatus, OneOffTodo } from './types';
+import { CategoryWithTodos, TodoWithCategory, TaskStatus, OneOffTodo, Timeslot } from './types';
 import { api } from './api';
 import { RefreshCw, RotateCcw, ListTodo, Sparkles, Moon, Sun, Plus, Menu, Network, FileText } from 'lucide-react';
 import { Collapsible, CollapsibleContent } from './components/ui/collapsible';
@@ -58,6 +58,8 @@ function App() {
         return prefersDark ? 'dark' : 'light';
     });
     const [navOpen, setNavOpen] = useState(false);
+    // Timeslots mapping todoId -> {start,end}
+    const [timeslots, setTimeslots] = useState<Record<number, Timeslot>>({});
 
     // Summary metrics for All Tasks tab
     const allTodos = useMemo(() => categories.flatMap(c => c.todos), [categories]);
@@ -214,16 +216,18 @@ function App() {
         if (initial) setIsLoading(true);
         setError(null);
         try {
-            const [categoriesData, recommendedData, oneOffData, recOneOffData] = await Promise.all([
+            const [categoriesData, recommendedData, oneOffData, recOneOffData, timeslotsData] = await Promise.all([
                 api.getCategories(),
                 api.getRecommendedTodos(),
                 api.getOneOffTodos(),
                 api.getRecommendedOneOffTodos(),
+                api.getTimeslots(),
             ]);
             setCategories(categoriesData);
             setRecommendedTodos(recommendedData);
             setOneOffs(Array.isArray(oneOffData) ? oneOffData : []);
             setRecommendedOneOffs(Array.isArray(recOneOffData) ? recOneOffData : []);
+            setTimeslots(timeslotsData || {});
             // recOneOffData is used only in Recommended tab rendering; keep separately if needed later
             saveCache(categoriesData, recommendedData);
             try {
@@ -782,8 +786,8 @@ function App() {
                 style={currentTab === 'graph' ? {} : { WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', paddingBottom: `${footerHeight}px` }}
             >
                 <Routes>
-                    <Route path="/all" element={<AllTasksPage categories={categories} summary={summary as any} onStatusChange={handleStatusChange} />} />
-                    <Route path="/recommended" element={<RecommendedPage todos={recommendedTodos} oneOffs={recommendedOneOffs} onStatusChange={handleStatusChange} onOneOffStatusChange={handleOneOffStatusChange} />} />
+                    <Route path="/all" element={<AllTasksPage categories={categories} summary={summary as any} onStatusChange={handleStatusChange} timeslots={timeslots} />} />
+                    <Route path="/recommended" element={<RecommendedPage todos={recommendedTodos} oneOffs={recommendedOneOffs} onStatusChange={handleStatusChange} onOneOffStatusChange={handleOneOffStatusChange} timeslots={timeslots} />} />
                     <Route path="/graph" element={<GraphPage />} />
                     <Route path="/reports" element={<ReportsPage />} />
                     <Route path="/oneoff" element={<OneOffsPage

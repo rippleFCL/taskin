@@ -1,16 +1,18 @@
-import { Todo, TaskStatus } from '../types';
+import { Todo, TaskStatus, Timeslot } from '../types';
 import { useEffect, useState } from 'react';
 import { Button } from './ui/button';
 import { cn, statusButtonClasses, statusBadgeClasses } from '../lib/utils';
 import { Check, Circle, CircleDashed, SkipForward, Clock } from 'lucide-react';
 import { Badge } from './ui/badge';
+import { TimeslotChip } from './TimeslotChip';
 
 interface TodoItemProps {
     todo: Todo;
     onStatusChange: (id: number, status: TaskStatus) => void;
+    timeslot?: Timeslot;
 }
 
-export function TodoItem({ todo, onStatusChange }: TodoItemProps) {
+export function TodoItem({ todo, onStatusChange, timeslot }: TodoItemProps) {
     const handleStatusChange = (newStatus: TaskStatus) => {
         // Optimistic update delegated to parent
         onStatusChange(todo.id, newStatus);
@@ -81,6 +83,8 @@ export function TodoItem({ todo, onStatusChange }: TodoItemProps) {
                                 {formatDuration(displaySeconds)}
                             </span>
                         )}
+                        {/* Timeslot banner next to the in-progress clock */}
+                        {timeslot && <TimeslotChip slot={timeslot} />}
                     </h4>
                     {todo.description && (
                         <p className="text-sm text-muted-foreground">{todo.description}</p>

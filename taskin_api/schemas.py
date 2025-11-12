@@ -18,6 +18,12 @@ class CategoryResponse(ORMModel):
     description: str | None = None
     id: int
 
+class Timeslot(BaseModel):
+    """Schema for time dependency, both None if timeslot is impossible"""
+
+    start: datetime | None
+    end: datetime | None
+
 
 class TodoResponse(ORMModel):
     """Schema for todo response"""
@@ -32,7 +38,6 @@ class TodoResponse(ORMModel):
     reset_count: int = 0
     position: int = 0
     cumulative_in_progress_seconds: float = 0
-
 
 class CategoryWithTodos(CategoryResponse):
     """Schema for category with todos"""

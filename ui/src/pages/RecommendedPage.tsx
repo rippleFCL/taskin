@@ -1,18 +1,20 @@
-import { TodoWithCategory, TaskStatus, OneOffTodo } from '../types';
+import { TodoWithCategory, TaskStatus, OneOffTodo, Timeslot } from '../types';
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '../components/ui/button';
 import { cn } from '../lib/utils';
 import { statusButtonClasses, statusBadgeClasses } from '../lib/utils';
 import { Check, Circle, CircleDashed, SkipForward, Clock } from 'lucide-react';
+import { TimeslotChip } from '../components/TimeslotChip';
 
 interface Props {
     todos: TodoWithCategory[];
     oneOffs?: OneOffTodo[];
     onStatusChange: (id: number, status: TaskStatus) => void;
     onOneOffStatusChange?: (id: number, status: TaskStatus) => void;
+    timeslots?: Record<number, Timeslot>;
 }
 
-export default function RecommendedPage({ todos, oneOffs = [], onStatusChange, onOneOffStatusChange }: Props) {
+export default function RecommendedPage({ todos, oneOffs = [], onStatusChange, onOneOffStatusChange, timeslots }: Props) {
     if (todos.length === 0 && oneOffs.length === 0) {
         return (
             <div className="bg-background rounded-lg border shadow-sm p-6">
@@ -80,6 +82,7 @@ export default function RecommendedPage({ todos, oneOffs = [], onStatusChange, o
                             {todo.status === 'in-progress' ? 'In Progress' : todo.status === 'complete' ? 'Complete' : todo.status === 'skipped' ? 'Skipped' : 'Incomplete'}
                         </span>
                         <TimerChip cumulativeSeconds={Number((todo as any).cumulative_in_progress_seconds || 0)} startIso={(todo as any).in_progress_start as string | undefined} running={todo.status === 'in-progress'} />
+                        {timeslots && <TimeslotChip slot={timeslots[todo.id]} />}
                     </h4>
                 </div>
                 {todo.description && (
