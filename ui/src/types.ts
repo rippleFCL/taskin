@@ -115,3 +115,9 @@ export interface Timeslot {
   start: string | null;
   end: string | null;
 }
+
+// Events
+export interface EventItem {
+  name: string;
+  timestamp: string; // ISO datetime string
+}

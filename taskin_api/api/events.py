@@ -3,11 +3,18 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from models import get_db, Event
+from schemas import EventResponse
 
 router = APIRouter()
 
 class EventTriggerResponse(BaseModel):
     message: str
+
+@router.get("/event-list", response_model=list[EventResponse])
+def get_event_list(db: Session = Depends(get_db)):
+    """Get a list of all events"""
+    events = db.query(Event).all()
+    return events
 
 @router.post("/events/{event_name}", response_model=EventTriggerResponse)
 def trigger_event(event_name: str, db: Session = Depends(get_db), timestamp: datetime.datetime | None = Query(None)):

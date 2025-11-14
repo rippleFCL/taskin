@@ -1,4 +1,4 @@
-import { CategoryWithTodos, TaskStatus, TodoWithCategory, OneOffTodo, DependencyGraph, ResetReport, AggregatedStatistics, Timeslot } from './types';
+import { CategoryWithTodos, TaskStatus, TodoWithCategory, OneOffTodo, DependencyGraph, ResetReport, AggregatedStatistics, Timeslot, EventItem } from './types';
 
 const API_BASE = '/api';
 
@@ -121,6 +121,13 @@ export const api = {
   async getTimeslots(): Promise<Record<number, Timeslot>> {
     const response = await fetch(`${API_BASE}/timeslots`);
     if (!response.ok) throw new Error('Failed to fetch timeslots');
+    return response.json();
+  },
+
+  // Events
+  async getEventList(): Promise<EventItem[]> {
+    const response = await fetch(`${API_BASE}/event-list`);
+    if (!response.ok) throw new Error('Failed to fetch event list');
     return response.json();
   },
 };

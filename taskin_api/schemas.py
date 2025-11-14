@@ -24,6 +24,11 @@ class Timeslot(BaseModel):
     start: datetime | None
     end: datetime | None
 
+class EventResponse(ORMModel):
+    """Schema for event response"""
+
+    name: str
+    timestamp: datetime
 
 class TodoResponse(ORMModel):
     """Schema for todo response"""

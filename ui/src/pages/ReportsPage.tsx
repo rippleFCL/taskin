@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ResetReport, AggregatedStatistics } from '../types';
+import { ResetReport, AggregatedStatistics, EventItem } from '../types';
 import { api } from '../api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -21,7 +21,9 @@ const ReportsPage = (_props: ReportsPageProps) => {
         return d.toISOString().slice(0, 10);
     });
     const [endDate, setEndDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
-    const [activeTab, setActiveTab] = useState<'summary' | 'reports'>('summary');
+    const [activeTab, setActiveTab] = useState<'summary' | 'reports' | 'events'>('summary');
+    const [events, setEvents] = useState<EventItem[]>([]);
+    const [now, setNow] = useState<number>(Date.now());
 
     const MIN_DATE = '2000-01-01';
     const MAX_DATE = '2100-12-31';
@@ -50,6 +52,21 @@ const ReportsPage = (_props: ReportsPageProps) => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [startDate, endDate]);
 
+    useEffect(() => {
+        if (activeTab === 'events') {
+            // Fetch events when entering Events tab
+            loadEvents();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeTab]);
+
+    useEffect(() => {
+        // Live clock: tick every second when on Events tab
+        if (activeTab !== 'events') return;
+        const id = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(id);
+    }, [activeTab]);
+
     const loadData = async () => {
         setIsLoading(true);
         // Build full-day ISO datetimes from date-only inputs
@@ -71,6 +88,16 @@ const ReportsPage = (_props: ReportsPageProps) => {
             setStatistics(null);
         }
         setIsLoading(false);
+    };
+
+    const loadEvents = async () => {
+        try {
+            const list = await api.getEventList();
+            const sorted = [...list].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+            setEvents(sorted);
+        } catch {
+            setEvents([]);
+        }
     };
 
     const formatDuration = (seconds: number | null) => {
@@ -96,6 +123,20 @@ const ReportsPage = (_props: ReportsPageProps) => {
             case 'skipped': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
             default: return 'bg-gray-100 text-gray-800';
         }
+    };
+
+    const formatSince = (iso: string) => {
+        const t = new Date(iso).getTime();
+        const diff = Math.max(0, now - t);
+        const s = Math.floor(diff / 1000);
+        const d = Math.floor(s / 86400);
+        const h = Math.floor((s % 86400) / 3600);
+        const m = Math.floor((s % 3600) / 60);
+        const sec = s % 60;
+        if (d > 0) return `${d}d ${h}h ago`;
+        if (h > 0) return `${h}h ${m}m ago`;
+        if (m > 0) return `${m}m ${sec}s ago`;
+        return `${sec}s ago`;
     };
 
     if (isLoading) {
@@ -188,6 +229,12 @@ const ReportsPage = (_props: ReportsPageProps) => {
                     onClick={() => setActiveTab('reports')}
                 >
                     Reports
+                </button>
+                <button
+                    className={`px-3 py-2 -mb-px border-b-2 ${activeTab === 'events' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+                    onClick={() => setActiveTab('events')}
+                >
+                    Events
                 </button>
             </div>
 
@@ -483,6 +530,36 @@ const ReportsPage = (_props: ReportsPageProps) => {
                         ))
                     )}
                 </div>
+            )}
+
+            {/* Events Tab */}
+            {activeTab === 'events' && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Clock className="w-5 h-5" />
+                            Events
+                        </CardTitle>
+                        <CardDescription>All events with live time since occurrence</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {events.length === 0 ? (
+                            <div className="py-8 text-center text-muted-foreground">No events yet.</div>
+                        ) : (
+                            <div className="divide-y rounded-md border">
+                                {events.map((ev, idx) => (
+                                    <div key={`${ev.name}-${ev.timestamp}-${idx}`} className="flex items-center justify-between py-2 px-3 hover:bg-muted/50">
+                                        <div className="flex-1">
+                                            <div className="font-medium">{ev.name}</div>
+                                            <div className="text-xs text-muted-foreground">{new Date(ev.timestamp).toLocaleString()}</div>
+                                        </div>
+                                        <div className="text-sm text-muted-foreground">{formatSince(ev.timestamp)}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
             )}
         </div>
     );
