@@ -60,6 +60,11 @@ export function TodoItem({ todo, onStatusChange, timeslot }: TodoItemProps) {
     const runningAdd = (todo.status === 'in-progress' && startMs) ? Math.max(0, Math.floor((nowMs - startMs) / 1000)) : 0;
     const displaySeconds = priorSeconds + runningAdd;
 
+    // Reset cadence: show when it will reset for not-due tasks
+    const resetInterval = Math.max(1, Number((todo as any).reset_interval ?? 1));
+    const resetCount = Math.max(0, Number((todo as any).reset_count ?? 0));
+    const resetsRemaining = ((resetInterval - (resetCount % resetInterval)) % resetInterval);
+
     const formatDuration = (seconds: number) => {
         if (!seconds || seconds <= 0) return '0s';
         const h = Math.floor(seconds / 3600);
@@ -85,6 +90,13 @@ export function TodoItem({ todo, onStatusChange, timeslot }: TodoItemProps) {
                         )}
                         {/* Timeslot banner next to the in-progress clock */}
                         {timeslot && <TimeslotChip slot={timeslot} />}
+                        {/* Not-due badge: shows remaining cycles until reset */}
+                        {resetsRemaining > 0 && (
+                            <span className="ml-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded border bg-muted/60 text-sm font-mono text-muted-foreground">
+                                <Clock className="w-3.5 h-3.5" />
+                                resets in {resetsRemaining}
+                            </span>
+                        )}
                     </h4>
                     {todo.description && (
                         <p className="text-sm text-muted-foreground">{todo.description}</p>
