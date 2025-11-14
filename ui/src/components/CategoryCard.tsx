@@ -15,7 +15,7 @@ interface CategoryCardProps {
 
 export function CategoryCard({ category, onStatusChange, timeslots }: CategoryCardProps) {
     const [open, setOpen] = useState(true);
-    const [tab, setTab] = useState<'open' | 'completed' | 'skipped'>('open');
+    const [tab, setTab] = useState<'open' | 'completed' | 'skipped' | 'notdue'>('open');
 
     const completedCount = category.todos.filter(t => t.status === 'complete').length;
     const skippedCount = category.todos.filter(t => t.status === 'skipped').length;
@@ -36,6 +36,10 @@ export function CategoryCard({ category, onStatusChange, timeslots }: CategoryCa
         .sort((a, b) => a.title.localeCompare(b.title));
     const skippedTodos = category.todos
         .filter(t => t.status === 'skipped')
+        .slice()
+        .sort((a, b) => a.title.localeCompare(b.title));
+    const notDueTodos = category.todos
+        .filter(t => (t.reset_count ?? 0) !== 0)
         .slice()
         .sort((a, b) => a.title.localeCompare(b.title));
 
@@ -114,6 +118,15 @@ export function CategoryCard({ category, onStatusChange, timeslots }: CategoryCa
                             >
                                 Skipped ({skippedCount})
                             </button>
+                            <button
+                                className={`px-3 py-2 text-sm -mb-px border-b-2 ${tab === 'notdue'
+                                    ? 'border-primary text-primary'
+                                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                                    }`}
+                                onClick={() => setTab('notdue')}
+                            >
+                                Not due ({notDueTodos.length})
+                            </button>
                         </div>
 
                         {totalCount === 0 ? (
@@ -139,6 +152,21 @@ export function CategoryCard({ category, onStatusChange, timeslots }: CategoryCa
                             ) : (
                                 <div className="divide-y">
                                     {skippedTodos.map(todo => (
+                                        <TodoItem
+                                            key={todo.id}
+                                            todo={todo}
+                                            onStatusChange={onStatusChange}
+                                            timeslot={timeslots ? timeslots[todo.id] : undefined}
+                                        />
+                                    ))}
+                                </div>
+                            )
+                        ) : tab === 'notdue' ? (
+                            notDueTodos.length === 0 ? (
+                                <p className="text-center text-sm text-muted-foreground py-6">No not-due tasks</p>
+                            ) : (
+                                <div className="divide-y">
+                                    {notDueTodos.map(todo => (
                                         <TodoItem
                                             key={todo.id}
                                             todo={todo}

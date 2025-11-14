@@ -12,6 +12,10 @@ export interface Todo {
   description: string | null;
   status: TaskStatus;
   category_id: number;
+  // Reset scheduling fields
+  reset_interval?: number;
+  reset_count?: number;
+  position?: number;
   // Deprecated: legacy field for current-cycle seconds (kept optional for backward compatibility)
   in_progress?: number;
   // Start timestamp of current in-progress session (ISO datetime) or null when not in-progress
