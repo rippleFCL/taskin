@@ -153,8 +153,6 @@ class Graph:
                 self.nodes[dept_tid].cat_dependencies.add(cat_dep_cid)
                 self.categories[cat_dep_cid].dependants.add(dept_tid)
 
-
-
         # handle node that is cat_dependant
         if node.cat_dependant is not None:
             for dep in node.dependencies:
@@ -165,6 +163,7 @@ class Graph:
                 else: # pass dependencies through the category
                     for dept in self.categories[node.cat_dependant].dependants:
                         self.nodes[dept].dependencies.add(dep)
+                        self.nodes[dep].dependants.add(dept)
 
             for cat_dep in node.cat_dependencies: # pass dependencies through the category
                 for dept in self.categories[node.cat_dependant].dependants:
@@ -369,6 +368,8 @@ class Graph:
         new_graph = self.copy()
         for tid in tids:
             new_graph.remove_node(tid)
+        if not new_graph.validate():
+            raise ValueError("Filtered graph is invalid after removing nodes")
         new_graph.build_ddm()
         new_graph.dedupe()
         return new_graph
