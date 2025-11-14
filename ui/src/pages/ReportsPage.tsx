@@ -206,6 +206,58 @@ const ReportsPage = (_props: ReportsPageProps) => {
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-3">
+                                {/* Totals summary */}
+                                {(() => {
+                                    const total = (statistics.total_completions || 0) + (statistics.total_skips || 0) + (statistics.total_incompletes || 0);
+                                    const completedPct = total > 0 ? (statistics.total_completions / total) * 100 : 0;
+                                    const skippedPct = total > 0 ? (statistics.total_skips / total) * 100 : 0;
+                                    const incompletePct = total > 0 ? (statistics.total_incompletes / total) * 100 : 0;
+                                    return (
+                                        <div className="border rounded-md p-3">
+                                            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                                                <div className="text-base font-medium">Totals</div>
+                                                <div className="text-xs text-muted-foreground">{total} tasks counted</div>
+                                            </div>
+                                            <div className="w-full rounded-full h-2 overflow-hidden relative bg-gray-500 dark:bg-gray-700">
+                                                {/* Completed */}
+                                                <div className="absolute left-0 top-0 bottom-0 bg-green-500" style={{ width: `${completedPct}%` }} />
+                                                {/* Skipped */}
+                                                <div className="absolute top-0 bottom-0 bg-yellow-500 left-[calc(var(--done,0%))]" style={{
+                                                    // Use a calculated left via inline style chaining by stacking segments
+                                                    // We can simulate stacking by positioning the skipped segment after completed via inline transform
+                                                    // Simpler: place it absolutely with left as completedPct%
+                                                    left: `${completedPct}%`,
+                                                    width: `${skippedPct}%`,
+                                                }} />
+                                                {/* Incomplete */}
+                                                <div className="absolute top-0 bottom-0 bg-gray-300 dark:bg-gray-500" style={{
+                                                    left: `${completedPct + skippedPct}%`,
+                                                    width: `${incompletePct}%`,
+                                                }} />
+                                            </div>
+                                            <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
+                                                <div className="flex items-center gap-2">
+                                                    <CheckCircle className="w-4 h-4 text-green-600" />
+                                                    <span className="text-muted-foreground">Completed:</span>
+                                                    <span className="font-medium">{statistics.total_completions}</span>
+                                                    <span className="text-muted-foreground">({completedPct.toFixed(0)}%)</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <SkipForward className="w-4 h-4 text-yellow-600" />
+                                                    <span className="text-muted-foreground">Skipped:</span>
+                                                    <span className="font-medium">{statistics.total_skips}</span>
+                                                    <span className="text-muted-foreground">({skippedPct.toFixed(0)}%)</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <XCircle className="w-4 h-4 text-gray-600" />
+                                                    <span className="text-muted-foreground">Incomplete:</span>
+                                                    <span className="font-medium">{statistics.total_incompletes}</span>
+                                                    <span className="text-muted-foreground">({incompletePct.toFixed(0)}%)</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
                                 {statistics.task_statistics.length === 0 ? (
                                     <p className="text-muted-foreground">No statistics available yet.</p>
                                 ) : (

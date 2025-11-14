@@ -25,6 +25,9 @@ def get_report(start_date: datetime, end_date: datetime, db: Session = Depends(g
 def generate_aggregated_statistics(reports: list[Report]) -> AggregatedStatistics:
     task_statistics_map: dict[tuple[str, str], TaskStatistics] = {}
     total_inprog_nz: dict[int, int] = {}
+    total_completions = 0
+    total_skips = 0
+    total_incompletes = 0
     for report in reports:
         for task_report in report.task_reports:
             ts = task_statistics_map.get((task_report.todo_title, task_report.category_name))
@@ -47,10 +50,13 @@ def generate_aggregated_statistics(reports: list[Report]) -> AggregatedStatistic
             ts.total_appearances += 1
             if task_report.final_status == TaskStatus.complete:
                 ts.times_completed += 1
+                total_completions += 1
             elif task_report.final_status == TaskStatus.skipped:
                 ts.times_skipped += 1
+                total_skips += 1
             else:
                 ts.times_incomplete += 1
+                total_incompletes += 1
             if task_report.in_progress_duration_seconds is not None and task_report.in_progress_duration_seconds > 0:
                 ts.tot_in_progress_duration_seconds += task_report.in_progress_duration_seconds
                 if task_report.todo_id not in total_inprog_nz:
@@ -80,6 +86,9 @@ def generate_aggregated_statistics(reports: list[Report]) -> AggregatedStatistic
     return AggregatedStatistics(
         report_count=len(reports),
         task_statistics=task_statistics,
+        total_completions=total_completions,
+        total_skips=total_skips,
+        total_incompletes=total_incompletes,
     )
 
 

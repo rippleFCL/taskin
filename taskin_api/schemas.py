@@ -162,3 +162,6 @@ class AggregatedStatistics(BaseModel):
 
     report_count: int  # Number of reports analyzed
     task_statistics: list[TaskStatistics]  # Per-task breakdown
+    total_completions: int
+    total_skips: int
+    total_incompletes: int

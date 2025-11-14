@@ -102,6 +102,10 @@ export interface TaskStatistics {
 export interface AggregatedStatistics {
   report_count: number;
   task_statistics: TaskStatistics[];
+  // Overall totals across the selected date range
+  total_completions: number;
+  total_skips: number;
+  total_incompletes: number;
 }
 
 // Timeslot types
