@@ -210,7 +210,7 @@ def get_dependency_graph(
                     f"Warning: Category dependency id {cat_dep} not found in category_id_map"
                 )
     for cat_id, cat_node in graph.categories.items():
-        if not cat_node.dependants:
+        if not cat_node.dependants and cat_id in category_id_map:
             # No dependants, connect to end
             edges.append(
                 DependencyEdge(

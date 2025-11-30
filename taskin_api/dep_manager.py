@@ -58,6 +58,8 @@ class DDM:
     def __bool__(self) -> bool:
         return bool(self.ddm)
 
+    def __hash__(self) -> int:
+        return hash(frozenset((tid, frozenset(deps)) for tid, deps in self.ddm.items()))
 
 class Graph:
     def __init__(self) -> None:
