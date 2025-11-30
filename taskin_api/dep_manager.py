@@ -1,12 +1,11 @@
-from config_loader import CONFIG, AppConfig, TimeDependency
+import datetime
 
 # from models import Category, Todo
 from dataclasses import dataclass
 
+from config_loader import CONFIG, AppConfig, TimeDependency
 from models import Category, Event
 from schemas import Timeslot
-
-import datetime
 
 
 @dataclass
@@ -60,6 +59,7 @@ class DDM:
 
     def __hash__(self) -> int:
         return hash(frozenset((tid, frozenset(deps)) for tid, deps in self.ddm.items()))
+
 
 class Graph:
     def __init__(self) -> None:

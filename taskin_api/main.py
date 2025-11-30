@@ -1,14 +1,15 @@
-import os
 import asyncio
+import os
 from contextlib import asynccontextmanager
 from typing import Any
+
+import structlog
+from api import categories, dependencies, events, oneoffs, reports, reset, todos
+from db_init import initialize_database
 from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from db_init import initialize_database
-from api import categories, todos, oneoffs, dependencies, reports, reset, events
 from notifier_service import notifier
-import structlog
 
 # Configure logging
 log_level = os.environ.get("LOG_LEVEL", "INFO").upper()

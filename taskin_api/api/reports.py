@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
-from models import datetime, get_db, Report, TaskStatus
+from models import Report, TaskStatus, datetime, get_db
 from schemas import (
+    AggregatedStatistics,
     ResetReportResponse,
     TaskStatistics,
-    AggregatedStatistics,
 )
+from sqlalchemy.orm import Session
 
 router = APIRouter()
 

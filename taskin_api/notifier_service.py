@@ -8,13 +8,14 @@ import hashlib
 import json
 import time
 from typing import Set
-from pydantic import HttpUrl
-import structlog
+
 import requests
-from sqlalchemy.orm import Session
-from models import get_db, Todo
+import structlog
 from api.todos import get_recommended_todos
 from config_loader import CONFIG
+from models import Todo, get_db
+from pydantic import HttpUrl
+from sqlalchemy.orm import Session
 
 
 class RecommendedTodosNotifier:

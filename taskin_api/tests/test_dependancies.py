@@ -1,11 +1,12 @@
-import pytest
 import sys
 from pathlib import Path
+
+import pytest
 
 # Add parent directory to path to allow imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from dep_manager import Graph, DDM
+from dep_manager import DDM, Graph
 
 
 @pytest.fixture

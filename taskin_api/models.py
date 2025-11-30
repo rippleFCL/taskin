@@ -1,17 +1,19 @@
 from __future__ import annotations
-import os
 
 import enum
+import os
 from datetime import datetime, timezone
 
 from sqlalchemy import (
-    Enum as SAEnum,
-    ForeignKey,
-    String,
-    create_engine,
-    Integer,
     DateTime,
     Float,
+    ForeignKey,
+    Integer,
+    String,
+    create_engine,
+)
+from sqlalchemy import (
+    Enum as SAEnum,
 )
 from sqlalchemy.orm import (
     DeclarativeBase,

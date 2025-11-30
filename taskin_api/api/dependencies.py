@@ -1,17 +1,17 @@
 from datetime import datetime
+
+from config_loader import TimeDependency
+from dep_manager import dep_man
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy.orm import Session
-from models import Event, TaskStatus, get_db, Category, Todo, OneOffTodo
+from models import Category, Event, OneOffTodo, TaskStatus, Todo, get_db
 from schemas import (
+    DependencyEdge,
     DependencyGraph,
     DependencyNode,
-    DependencyEdge,
     NodeType,
     RGBColor,
 )
-from dep_manager import dep_man
-from config_loader import TimeDependency
-
+from sqlalchemy.orm import Session
 
 router = APIRouter()
 

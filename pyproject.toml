@@ -30,3 +30,6 @@ dev = [
     "ruff (>=0.14.4,<0.15.0)",
     "pyright[nodejs] (>=1.1.407,<2.0.0)",
 ]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "W1", "W2", "F", "RUF", "I"]

@@ -1,10 +1,11 @@
-from sqlalchemy.orm import Session
-from models import Category, Event, Todo, TaskStatus, SessionLocal
-from dep_manager import dep_man
-from config_loader import CONFIG, CategoryConfig, TodoConfig
-from alembic.config import Config
-from alembic import command
 import os
+
+from alembic import command
+from alembic.config import Config
+from config_loader import CONFIG, CategoryConfig, TodoConfig
+from dep_manager import dep_man
+from models import Category, Event, SessionLocal, TaskStatus, Todo
+from sqlalchemy.orm import Session
 
 
 def sync_db_from_config(db: Session):

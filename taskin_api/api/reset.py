@@ -1,15 +1,16 @@
-from fastapi import APIRouter, Depends
-import requests
-from sqlalchemy.orm import Session
 from datetime import datetime
+
+import requests
+from config_loader import CONFIG
+from fastapi import APIRouter, Depends
 from models import (
-    get_db,
-    Todo,
-    TaskStatus,
     Report,
     TaskReport,
+    TaskStatus,
+    Todo,
+    get_db,
 )
-from config_loader import CONFIG
+from sqlalchemy.orm import Session
 
 router = APIRouter()
 

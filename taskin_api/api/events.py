@@ -1,9 +1,10 @@
 import datetime
+
 from fastapi import APIRouter, Depends, HTTPException, Query
+from models import Event, get_db
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
-from models import get_db, Event
 from schemas import EventResponse
+from sqlalchemy.orm import Session
 
 router = APIRouter()
 
