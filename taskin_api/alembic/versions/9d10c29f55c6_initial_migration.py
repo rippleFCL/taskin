@@ -51,10 +51,16 @@ def upgrade() -> None:
             sa.Column("id", sa.Integer(), nullable=False),
             sa.Column("title", sa.String(), nullable=False),
             sa.Column("description", sa.String(), nullable=True),
-            sa.Column("status", sa.Enum("incomplete", "in_progress", "complete", name="taskstatus"), nullable=False),
+            sa.Column(
+                "status",
+                sa.Enum("incomplete", "in_progress", "complete", name="taskstatus"),
+                nullable=False,
+            ),
             sa.PrimaryKeyConstraint("id"),
         )
-        op.create_index(op.f("ix_oneoff_todos_id"), "oneoff_todos", ["id"], unique=False)
+        op.create_index(
+            op.f("ix_oneoff_todos_id"), "oneoff_todos", ["id"], unique=False
+        )
 
     # Create todos table if it doesn't exist
     if "todos" not in existing_tables:
@@ -63,7 +69,11 @@ def upgrade() -> None:
             sa.Column("id", sa.Integer(), nullable=False),
             sa.Column("title", sa.String(), nullable=False),
             sa.Column("description", sa.String(), nullable=True),
-            sa.Column("status", sa.Enum("incomplete", "in_progress", "complete", name="taskstatus"), nullable=False),
+            sa.Column(
+                "status",
+                sa.Enum("incomplete", "in_progress", "complete", name="taskstatus"),
+                nullable=False,
+            ),
             sa.Column("category_id", sa.Integer(), nullable=False),
             sa.Column("reset_interval", sa.Integer(), nullable=False),
             sa.Column("reset_count", sa.Integer(), nullable=False),
@@ -84,12 +94,18 @@ def upgrade() -> None:
             sa.Column("depends_on_todo_id", sa.Integer(), nullable=True),
             sa.Column("depends_on_category_id", sa.Integer(), nullable=True),
             sa.Column("depends_on_all_oneoffs", sa.Integer(), nullable=False),
-            sa.ForeignKeyConstraint(["depends_on_category_id"], ["categories.id"], ondelete="CASCADE"),
-            sa.ForeignKeyConstraint(["depends_on_todo_id"], ["todos.id"], ondelete="CASCADE"),
+            sa.ForeignKeyConstraint(
+                ["depends_on_category_id"], ["categories.id"], ondelete="CASCADE"
+            ),
+            sa.ForeignKeyConstraint(
+                ["depends_on_todo_id"], ["todos.id"], ondelete="CASCADE"
+            ),
             sa.ForeignKeyConstraint(["todo_id"], ["todos.id"], ondelete="CASCADE"),
             sa.PrimaryKeyConstraint("id"),
         )
-        op.create_index(op.f("ix_todo_dependencies_id"), "todo_dependencies", ["id"], unique=False)
+        op.create_index(
+            op.f("ix_todo_dependencies_id"), "todo_dependencies", ["id"], unique=False
+        )
 
 
 def downgrade() -> None:

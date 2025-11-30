@@ -4,11 +4,11 @@ pre-commit:
     ruff-lint:
       root: "taskin_api/"
       glob: "*.py"
-      run: ruff check {staged_files}
+      run: ruff check {staged_files} --fix
     ruff-format:
       root: "taskin_api/"
       glob: "*.py"
-      run: ruff format --check {staged_files}
+      run: ruff format {staged_files}
     pyright:
       root: "taskin_api/"
       glob: "*.py"

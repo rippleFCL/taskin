@@ -10,7 +10,9 @@ from schemas import (
 router = APIRouter()
 
 
-@router.get("/reports/{start_date}/{end_date}", response_model=list[ResetReportResponse])
+@router.get(
+    "/reports/{start_date}/{end_date}", response_model=list[ResetReportResponse]
+)
 def get_report(start_date: datetime, end_date: datetime, db: Session = Depends(get_db)):
     """Get all reset reports within the date range [start_date, end_date], newest first."""
     reports = (
@@ -30,7 +32,9 @@ def generate_aggregated_statistics(reports: list[Report]) -> AggregatedStatistic
     total_incompletes = 0
     for report in reports:
         for task_report in report.task_reports:
-            ts = task_statistics_map.get((task_report.todo_title, task_report.category_name))
+            ts = task_statistics_map.get(
+                (task_report.todo_title, task_report.category_name)
+            )
             if not ts:
                 ts = TaskStatistics(
                     todo_id=task_report.todo_id,
@@ -45,7 +49,9 @@ def generate_aggregated_statistics(reports: list[Report]) -> AggregatedStatistic
                     total_appearances=0,
                     times_incomplete=0,
                 )
-                task_statistics_map[(task_report.todo_title, task_report.category_name)] = ts
+                task_statistics_map[
+                    (task_report.todo_title, task_report.category_name)
+                ] = ts
 
             ts.total_appearances += 1
             if task_report.final_status == TaskStatus.complete:
@@ -57,8 +63,13 @@ def generate_aggregated_statistics(reports: list[Report]) -> AggregatedStatistic
             else:
                 ts.times_incomplete += 1
                 total_incompletes += 1
-            if task_report.in_progress_duration_seconds is not None and task_report.in_progress_duration_seconds > 0:
-                ts.tot_in_progress_duration_seconds += task_report.in_progress_duration_seconds
+            if (
+                task_report.in_progress_duration_seconds is not None
+                and task_report.in_progress_duration_seconds > 0
+            ):
+                ts.tot_in_progress_duration_seconds += (
+                    task_report.in_progress_duration_seconds
+                )
                 if task_report.todo_id not in total_inprog_nz:
                     total_inprog_nz[task_report.todo_id] = 0
                 total_inprog_nz[task_report.todo_id] += 1
@@ -69,7 +80,9 @@ def generate_aggregated_statistics(reports: list[Report]) -> AggregatedStatistic
         if ts.total_appearances > 0:
             ts.completion_rate = ts.times_completed / ts.total_appearances
             ts.skip_rate = ts.times_skipped / ts.total_appearances
-            ts.avg_in_progress_duration_seconds = ts.tot_in_progress_duration_seconds / total_inprog_nz.get(ts.todo_id, 1)
+            ts.avg_in_progress_duration_seconds = (
+                ts.tot_in_progress_duration_seconds / total_inprog_nz.get(ts.todo_id, 1)
+            )
         else:
             ts.completion_rate = 0.0
             ts.skip_rate = 0.0
@@ -93,7 +106,9 @@ def generate_aggregated_statistics(reports: list[Report]) -> AggregatedStatistic
 
 
 @router.get("/statistics/{start_date}/{end_date}", response_model=AggregatedStatistics)
-def get_statistics(start_date: datetime, end_date: datetime, db: Session = Depends(get_db)):
+def get_statistics(
+    start_date: datetime, end_date: datetime, db: Session = Depends(get_db)
+):
     """
     Get aggregated statistics across the most recent N reports.
 

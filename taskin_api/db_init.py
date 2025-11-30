@@ -21,7 +21,9 @@ def sync_db_from_config(db: Session):
 
     # Build a map of config data for efficient lookup
     config_categories: dict[str, CategoryConfig] = {}
-    config_todos: dict[tuple[str, str], TodoConfig] = {}  # key: (category_name, todo_title)
+    config_todos: dict[
+        tuple[str, str], TodoConfig
+    ] = {}  # key: (category_name, todo_title)
     config_event_names: set[str] = set()
     for category_data in config.categories:
         category_name = category_data.name
@@ -35,7 +37,9 @@ def sync_db_from_config(db: Session):
 
     # Get existing data from database
     existing_categories = {cat.name: cat for cat in db.query(Category).all()}
-    existing_todos: dict[tuple[str, str], Todo] = {}  # key: (category_name, todo_title) -> todo object
+    existing_todos: dict[
+        tuple[str, str], Todo
+    ] = {}  # key: (category_name, todo_title) -> todo object
     existing_events = {event.name: event for event in db.query(Event).all()}
 
     for todo in db.query(Todo).all():
@@ -60,7 +64,9 @@ def sync_db_from_config(db: Session):
             category_map[category_name] = cat
 
     # 2. Sync todos - add new, update existing, and assign positions
-    for idx, ((category_name, todo_title), todo_data) in enumerate(config_todos.items()):
+    for idx, ((category_name, todo_title), todo_data) in enumerate(
+        config_todos.items()
+    ):
         key = (category_name, todo_title)
         category = category_map[category_name]
 
@@ -128,9 +134,13 @@ def sync_db_from_config(db: Session):
         print(f"Removed {len(stale_categories)} stale category/categories")
 
     db.commit()
-    print(f"Database synced with config: {len(config_categories)} categories, {len(config_todos)} todos, {len(config_event_names)} events")
+    print(
+        f"Database synced with config: {len(config_categories)} categories, {len(config_todos)} todos, {len(config_event_names)} events"
+    )
 
-    dep_man.load_from_db(categories=db.query(Category).all(), events=db.query(Event).all())
+    dep_man.load_from_db(
+        categories=db.query(Category).all(), events=db.query(Event).all()
+    )
 
     unready_todos = db.query(Todo.id).filter(Todo.reset_count > 0).all()
     unready_ids = {tid for (tid,) in unready_todos}

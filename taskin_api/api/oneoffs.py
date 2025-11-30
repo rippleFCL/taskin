@@ -15,7 +15,9 @@ def _post_webhook(url: str, body: dict):
     """Helper function to post webhook notifications"""
     try:
         data = json.dumps(body).encode("utf-8")
-        req = urlrequest.Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")
+        req = urlrequest.Request(
+            url, data=data, headers={"Content-Type": "application/json"}, method="POST"
+        )
         with urlrequest.urlopen(req, timeout=5):
             pass
     except (HTTPError, URLError, TimeoutError, Exception):
@@ -60,7 +62,9 @@ def create_oneoff_todo(
 
 
 @router.patch("/oneoff-todos/{oneoff_id}", response_model=OneOffTodoResponse)
-def update_oneoff_todo(oneoff_id: int, payload: OneOffTodoUpdate, db: Session = Depends(get_db)):
+def update_oneoff_todo(
+    oneoff_id: int, payload: OneOffTodoUpdate, db: Session = Depends(get_db)
+):
     """Update a one-off todo's title, description, and/or status. Completed items persist (no auto-delete)."""
     item = db.query(OneOffTodo).filter(OneOffTodo.id == oneoff_id).first()
     if not item:
@@ -89,7 +93,9 @@ def delete_oneoff_todo(oneoff_id: int, db: Session = Depends(get_db)):
 
 
 @router.patch("/oneoff-todos/{oneoff_id}/status", response_model=OneOffTodoResponse)
-def update_oneoff_status(oneoff_id: int, status: TaskStatus, db: Session = Depends(get_db)):
+def update_oneoff_status(
+    oneoff_id: int, status: TaskStatus, db: Session = Depends(get_db)
+):
     """Update the status of a one-off todo. Completed items persist (no auto-delete)."""
     item = db.query(OneOffTodo).filter(OneOffTodo.id == oneoff_id).first()
     if not item:
@@ -105,7 +111,10 @@ def get_recommended_oneoff_todos(db: Session = Depends(get_db)):
     """Get recommended one-off todos using the DDM for efficient dependency lookup."""
     # Get all incomplete/in-progress todo IDs (these are blocking)
     incomplete_todo_ids = {
-        todo.id for todo in db.query(Todo).filter(Todo.status.not_in([TaskStatus.complete, TaskStatus.skipped])).all()
+        todo.id
+        for todo in db.query(Todo)
+        .filter(Todo.status.not_in([TaskStatus.complete, TaskStatus.skipped]))
+        .all()
     }
 
     # Use the DDM to get all dependencies for oneoffs

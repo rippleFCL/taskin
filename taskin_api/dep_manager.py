@@ -1,4 +1,5 @@
 from config_loader import CONFIG, AppConfig, TimeDependency
+
 # from models import Category, Todo
 from dataclasses import dataclass
 
@@ -6,6 +7,7 @@ from models import Category, Event
 from schemas import Timeslot
 
 import datetime
+
 
 @dataclass
 class TodoNode:
@@ -16,11 +18,13 @@ class TodoNode:
     cat_dependant: int | None
     dependants: set[int]
 
+
 @dataclass
 class CategoryNode:
     cid: int
     dependencies: set[int]
     dependants: set[int]
+
 
 class DDM:
     def __init__(self) -> None:
@@ -34,7 +38,7 @@ class DDM:
             self.ddm[tid] = set()
         self.ddm[tid].update(deps)
 
-    def filter(self, filter_tids: set[int]) -> 'DDM':
+    def filter(self, filter_tids: set[int]) -> "DDM":
         filtered = DDM()
         for tid, deps in self.ddm.items():
             if tid in filter_tids:
@@ -54,6 +58,7 @@ class DDM:
     def __bool__(self) -> bool:
         return bool(self.ddm)
 
+
 class Graph:
     def __init__(self) -> None:
         self.nodes: dict[int, TodoNode] = {}
@@ -63,9 +68,7 @@ class Graph:
     def add_todo(self, tid: int, cid: int):
         if cid not in self.categories:
             self.categories[cid] = CategoryNode(
-                cid=cid,
-                dependencies=set(),
-                dependants=set()
+                cid=cid, dependencies=set(), dependants=set()
             )
         if tid not in self.nodes:
             self.nodes[tid] = TodoNode(
@@ -74,7 +77,7 @@ class Graph:
                 cat_dependencies=set(),
                 dependencies=set(),
                 cat_dependant=cid,
-                dependants=set()
+                dependants=set(),
             )
         self.categories[cid].dependencies.add(tid)
 
@@ -91,7 +94,9 @@ class Graph:
 
     def add_cat_dep(self, tid: int, dep_cid: int):
         if tid not in self.nodes:
-            raise ValueError("Todo nodes must be added before adding category dependencies")
+            raise ValueError(
+                "Todo nodes must be added before adding category dependencies"
+            )
         if dep_cid not in self.categories:
             raise ValueError("Unknown category dependency")
 
@@ -100,8 +105,7 @@ class Graph:
         self.categories[dep_cid].dependants.add(tid)
 
     def _find_floor_cids(self):
-        """Finds floor nodes (no dependants)
-        """
+        """Finds floor nodes (no dependants)"""
         floors: list[int] = []
         for cid, node in self.categories.items():
             if not node.dependants:
@@ -109,8 +113,7 @@ class Graph:
         return floors
 
     def _find_root_tids(self):
-        """Finds root nodes (no dependencies)
-        """
+        """Finds root nodes (no dependencies)"""
         roots: list[int] = []
         for tid, node in self.nodes.items():
             if not node.dependencies and not node.cat_dependencies:
@@ -131,10 +134,8 @@ class Graph:
         self.ddm.add_deps(tid, deps)
         return deps
 
-
     def build_ddm(self):
-        """Builds the deep dependency map
-        """
+        """Builds the deep dependency map"""
         self.ddm = DDM()
         for cids in self._find_floor_cids():
             for tid in self.categories[cids].dependencies:
@@ -145,7 +146,7 @@ class Graph:
             return
         node = self.nodes[tid]
         for dept_tid in node.dependants:
-            for dep in node.dependencies: # move dependencies to dependant
+            for dep in node.dependencies:  # move dependencies to dependant
                 self.nodes[dept_tid].dependencies.add(dep)
                 self.nodes[dep].dependants.add(dept_tid)
 
@@ -160,16 +161,17 @@ class Graph:
                 if dep_node.cid == node.cid:
                     dep_node.cat_dependant = node.cat_dependant
                     self.categories[node.cat_dependant].dependencies.add(dep)
-                else: # pass dependencies through the category
+                else:  # pass dependencies through the category
                     for dept in self.categories[node.cat_dependant].dependants:
                         self.nodes[dept].dependencies.add(dep)
                         self.nodes[dep].dependants.add(dept)
 
-            for cat_dep in node.cat_dependencies: # pass dependencies through the category
+            for (
+                cat_dep
+            ) in node.cat_dependencies:  # pass dependencies through the category
                 for dept in self.categories[node.cat_dependant].dependants:
                     self.nodes[dept].cat_dependencies.add(cat_dep)
                     self.categories[cat_dep].dependants.add(dept)
-
 
         for dep in node.dependencies:
             self.nodes[dep].dependants.discard(tid)
@@ -182,23 +184,28 @@ class Graph:
             if self.categories[node.cat_dependant].dependencies == set():
                 for dept in self.categories[node.cat_dependant].dependants:
                     self.nodes[dept].cat_dependencies.discard(node.cid)
-                del self.categories[node.cat_dependant] # remove empty category
+                del self.categories[node.cat_dependant]  # remove empty category
         del self.nodes[tid]
 
-    def _filtered_ddm(self, current_tid: int, filter: set[int], filter_cat: set[int]) -> set[int]:
-        """Filters the deep dependency map based on a set of todo IDs
-        """
+    def _filtered_ddm(
+        self, current_tid: int, filter: set[int], filter_cat: set[int]
+    ) -> set[int]:
+        """Filters the deep dependency map based on a set of todo IDs"""
         filtered: set[int] = set()
         current_ddm_deps = self.ddm.get_deps(current_tid)
         category_deps = set[int]()
         for filter_category in filter_cat:
             category_deps.update(self.categories[filter_category].dependencies)
-        if not filter.intersection(current_ddm_deps) and not category_deps.intersection(current_ddm_deps):
+        if not filter.intersection(current_ddm_deps) and not category_deps.intersection(
+            current_ddm_deps
+        ):
             return self.ddm.get_deps(current_tid)
         for dep in self.nodes[current_tid].dependencies:
             if dep in filter:
                 continue
-            filtered.update(self._filtered_ddm(dep, set(), set())) # dont filter nodes above you
+            filtered.update(
+                self._filtered_ddm(dep, set(), set())
+            )  # dont filter nodes above you
             filtered.add(dep)
         for cat_dep in self.nodes[current_tid].cat_dependencies:
             if cat_dep in filter_cat:
@@ -207,8 +214,7 @@ class Graph:
         return filtered
 
     def _filtered_ddm_category(self, current_cid, filter_tid: set[int]) -> set[int]:
-        """Filters the deep dependency map based on a set of todo IDs
-        """
+        """Filters the deep dependency map based on a set of todo IDs"""
         filtered: set[int] = set()
         for tid in self.categories[current_cid].dependencies:
             if tid in filter_tid:
@@ -218,8 +224,7 @@ class Graph:
         return filtered
 
     def _dedupe_category(self, cid: int):
-        """Remove dependency nodes that can be reached through other paths
-        """
+        """Remove dependency nodes that can be reached through other paths"""
         node = self.categories[cid]
         to_remove: set[int] = set()
         category_deps = set[int]()
@@ -238,8 +243,7 @@ class Graph:
             self._dedupe_node(dept)
 
     def _dedupe_node(self, tid: int):
-        """Remove dependency nodes that can be reached through other paths
-        """
+        """Remove dependency nodes that can be reached through other paths"""
         node = self.nodes[tid]
         to_remove: set[int] = set()
         for dep in node.dependencies:
@@ -281,7 +285,7 @@ class Graph:
             new_graph.categories[cid] = CategoryNode(
                 cid=cat_node.cid,
                 dependencies=cat_node.dependencies.copy(),
-                dependants=cat_node.dependants.copy()
+                dependants=cat_node.dependants.copy(),
             )
 
         # Deep copy all todo nodes
@@ -292,7 +296,7 @@ class Graph:
                 cat_dependencies=todo_node.cat_dependencies.copy(),
                 dependencies=todo_node.dependencies.copy(),
                 cat_dependant=todo_node.cat_dependant,
-                dependants=todo_node.dependants.copy()
+                dependants=todo_node.dependants.copy(),
             )
 
         new_graph.build_ddm()
@@ -375,10 +379,9 @@ class Graph:
         return new_graph
 
 
-
 class DependencyManager:
     ONEOFF_START_ID = -1000  # Starting node id for one-off todos
-    ONEOFF_END_ID = -1999    # Ending node id for one-off todos
+    ONEOFF_END_ID = -1999  # Ending node id for one-off todos
 
     def __init__(self, config: AppConfig):
         self.config = config
@@ -407,11 +410,15 @@ class DependencyManager:
                 time_slot_end = None
                 if time_dep:
                     if time_dep.start is not None:
-                        dep_start = start_time + datetime.timedelta(seconds=time_dep.start%86400)
+                        dep_start = start_time + datetime.timedelta(
+                            seconds=time_dep.start % 86400
+                        )
                         if time_slot_start is None or dep_start > time_slot_start:
                             time_slot_start = dep_start
                     if time_dep.end is not None:
-                        dep_end = start_time + datetime.timedelta(seconds=time_dep.end%86400)
+                        dep_end = start_time + datetime.timedelta(
+                            seconds=time_dep.end % 86400
+                        )
                         if time_slot_end is None or dep_end < time_slot_end:
                             time_slot_end = dep_end
 
@@ -421,27 +428,30 @@ class DependencyManager:
                         continue
 
                     if event_time_dep.start is not None:
-                        dep_start = event_timestamp + datetime.timedelta(seconds=event_time_dep.start%86400)
+                        dep_start = event_timestamp + datetime.timedelta(
+                            seconds=event_time_dep.start % 86400
+                        )
                         if time_slot_start is None or dep_start > time_slot_start:
                             time_slot_start = dep_start
 
                     if event_time_dep.end is not None:
-                        dep_end = event_timestamp + datetime.timedelta(seconds=event_time_dep.end%86400)
+                        dep_end = event_timestamp + datetime.timedelta(
+                            seconds=event_time_dep.end % 86400
+                        )
                         if time_slot_end is None or dep_end < time_slot_end:
                             time_slot_end = dep_end
 
                 todo_timeslot[todo_id] = Timeslot(
-                    start=time_slot_start,
-                    end=time_slot_end
+                    start=time_slot_start, end=time_slot_end
                 )
-                if time_slot_start and time_slot_end and time_slot_start >= time_slot_end:
-                    todo_timeslot[todo_id] = Timeslot(
-                        start=None,
-                        end=None
-                    )
+                if (
+                    time_slot_start
+                    and time_slot_end
+                    and time_slot_start >= time_slot_end
+                ):
+                    todo_timeslot[todo_id] = Timeslot(start=None, end=None)
 
         return todo_timeslot
-
 
     def load_from_db(self, categories: list[Category], events: list[Event]):
         for event in events:
@@ -451,12 +461,15 @@ class DependencyManager:
         for category in categories:
             for todo in category.todos:
                 new_graph.add_todo(todo.id, category.id)
-        new_graph.add_todo(self.ONEOFF_START_ID, self.ONEOFF_END_ID)  # One-off todos category
-        self.todo_id_map = {todo.title: todo.id for category in categories for todo in category.todos}
+        new_graph.add_todo(
+            self.ONEOFF_START_ID, self.ONEOFF_END_ID
+        )  # One-off todos category
+        self.todo_id_map = {
+            todo.title: todo.id for category in categories for todo in category.todos
+        }
         self.category_id_map = {category.name: category.id for category in categories}
         for category in self.config.categories:
             for todo in category.todos:
-
                 todo_id = self.todo_id_map.get(todo.title)
                 if not todo_id:
                     continue
@@ -495,7 +508,9 @@ class DependencyManager:
         if sub_graph.validate() is False:
             raise ValueError("Scoped subgraph is invalid after filtering")
         if sub_graph.ddm != self.full_graph.ddm.filter(excluded_tids):
-            raise ValueError("Scoped subgraph DDM does not match filtered full graph DDM")
+            raise ValueError(
+                "Scoped subgraph DDM does not match filtered full graph DDM"
+            )
         return sub_graph
 
 

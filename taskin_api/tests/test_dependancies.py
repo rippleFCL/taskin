@@ -127,6 +127,7 @@ def test_deduplication_shouldnt_change(filled_graph):
     assert filled_graph.nodes[3].dependants == {4, 5}
     assert filled_graph.validate()
 
+
 def test_deduplication(filled_graph):
     filled_graph.add_dep_node(4, 2)  # Adding redundant dependency
     filled_graph.add_dep_node(5, 1)

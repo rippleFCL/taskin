@@ -2,9 +2,8 @@ import os
 import asyncio
 from contextlib import asynccontextmanager
 from typing import Any
-from fastapi import FastAPI, HTTPException, Header, Response
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from db_init import initialize_database
 from api import categories, todos, oneoffs, dependencies, reports, reset, events
@@ -37,7 +36,9 @@ else:
         structlog.processors.add_log_level,
         structlog.processors.TimeStamper(fmt="iso", utc=False),
         structlog.processors.StackInfoRenderer(),
-        structlog.processors.ExceptionRenderer(structlog.tracebacks.ExceptionDictTransformer()),
+        structlog.processors.ExceptionRenderer(
+            structlog.tracebacks.ExceptionDictTransformer()
+        ),
         structlog.processors.JSONRenderer(sort_keys=True),
     ]
 
@@ -78,7 +79,7 @@ api = FastAPI(
     title="Taskin API",
     description="A simple todo API with categories and SQLite storage",
     version="0.1.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # Configure CORS
@@ -99,10 +100,12 @@ api.include_router(reports.router, prefix="/api", tags=["reports"])
 api.include_router(reset.router, prefix="/api", tags=["reset"])
 api.include_router(events.router, prefix="/api", tags=["events"])
 
+
 @api.get("/api/health")
 def health_check():
     """Health check endpoint"""
     return {"status": "healthy"}
+
 
 class SPAStaticFiles(StaticFiles):
     async def get_response(self, path: str, scope: Any) -> Response:
@@ -116,7 +119,6 @@ class SPAStaticFiles(StaticFiles):
 
         # If the file does NOT exist, serve `index.html`
         return await super().get_response("index.html", scope)
-
 
 
 if os.path.exists("static"):

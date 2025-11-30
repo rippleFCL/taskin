@@ -18,17 +18,20 @@ class CategoryResponse(ORMModel):
     description: str | None = None
     id: int
 
+
 class Timeslot(BaseModel):
     """Schema for time dependency, both None if timeslot is impossible"""
 
     start: datetime | None
     end: datetime | None
 
+
 class EventResponse(ORMModel):
     """Schema for event response"""
 
     name: str
     timestamp: datetime
+
 
 class TodoResponse(ORMModel):
     """Schema for todo response"""
@@ -43,6 +46,7 @@ class TodoResponse(ORMModel):
     reset_count: int = 0
     position: int = 0
     cumulative_in_progress_seconds: float = 0
+
 
 class CategoryWithTodos(CategoryResponse):
     """Schema for category with todos"""
@@ -85,12 +89,14 @@ class NodeType(Enum):
     oneoff = "oneoff"
     control = "control"
 
+
 class RGBColor(BaseModel):
     """RGB color representation"""
 
     r: int = Field(..., ge=0, le=255)
     g: int = Field(..., ge=0, le=255)
     b: int = Field(..., ge=0, le=255)
+
 
 # Dependency graph schemas
 class DependencyNode(BaseModel):
@@ -151,7 +157,9 @@ class TaskStatistics(BaseModel):
     # Metrics
     completion_rate: float  # Percentage of reports where task was completed (0-100)
     skip_rate: float  # Percentage of reports where task was skipped (0-100)
-    avg_in_progress_duration_seconds: float | None  # Average time spent in-progress when it was used
+    avg_in_progress_duration_seconds: (
+        float | None
+    )  # Average time spent in-progress when it was used
 
     # Raw counts
     total_appearances: int
@@ -159,7 +167,9 @@ class TaskStatistics(BaseModel):
     times_skipped: int
     times_incomplete: int
 
-    tot_in_progress_duration_seconds: float  # Total time spent in-progress across all reports
+    tot_in_progress_duration_seconds: (
+        float  # Total time spent in-progress across all reports
+    )
 
 
 class AggregatedStatistics(BaseModel):

@@ -2,21 +2,19 @@
 Background notifier service that monitors recommended todos and sends webhook notifications
 when the recommended list changes despite task statuses remaining unchanged.
 """
+
 import asyncio
 import hashlib
 import json
-from datetime import datetime
 import time
 from typing import Set
 from pydantic import HttpUrl
 import structlog
 import requests
 from sqlalchemy.orm import Session
-from models import get_db, Todo, TaskStatus
+from models import get_db, Todo
 from api.todos import get_recommended_todos
 from config_loader import CONFIG
-
-
 
 
 class RecommendedTodosNotifier:
@@ -24,6 +22,7 @@ class RecommendedTodosNotifier:
     Monitors recommended todos and sends notifications when they change
     without task statuses changing.
     """
+
     def __init__(self, webhook_url: HttpUrl | None, check_interval: int = 1):
         self.logger = structlog.stdlib.get_logger().bind(module="notifier_service")
         self.webhook_url = str(webhook_url) if webhook_url else None
@@ -57,9 +56,7 @@ class RecommendedTodosNotifier:
         Send a webhook notification about the recommended todos change.
         """
         self.logger.info("Recommended list changed, sending notification")
-        payload = {
-            "event": "recommended_todos_changed"
-        }
+        payload = {"event": "recommended_todos_changed"}
 
         try:
             if self.webhook_url:
@@ -67,7 +64,7 @@ class RecommendedTodosNotifier:
                     self.webhook_url,
                     json=payload,
                     headers={"Content-Type": "application/json"},
-                    timeout=10
+                    timeout=10,
                 )
                 response.raise_for_status()
 
@@ -75,7 +72,7 @@ class RecommendedTodosNotifier:
             self.logger.error(
                 "Failed to send webhook notification",
                 error=str(e),
-                webhook_url=self.webhook_url
+                webhook_url=self.webhook_url,
             )
 
     async def check_and_notify(self):
@@ -96,17 +93,21 @@ class RecommendedTodosNotifier:
                 self.logger.info(
                     "Initial check - establishing baseline",
                     task_states_hash=current_task_states_hash,
-                    recommended_count=len(current_recommended_todo_ids)
+                    recommended_count=len(current_recommended_todo_ids),
                 )
                 self.last_task_states_hash = current_task_states_hash
                 self.last_recommended_todo_ids = current_recommended_todo_ids
                 return
 
             # Check if task statuses changed
-            task_statuses_changed = current_task_states_hash != self.last_task_states_hash
+            task_statuses_changed = (
+                current_task_states_hash != self.last_task_states_hash
+            )
 
             # Check if recommended todos changed
-            recommended_changed = current_recommended_todo_ids != self.last_recommended_todo_ids
+            recommended_changed = (
+                current_recommended_todo_ids != self.last_recommended_todo_ids
+            )
 
             if recommended_changed and not task_statuses_changed:
                 self._send_webhook_notification()
@@ -116,7 +117,9 @@ class RecommendedTodosNotifier:
             self.last_recommended_todo_ids = current_recommended_todo_ids
 
         except Exception as e:
-            self.logger.error("Error during check_and_notify", error=str(e), exc_info=True)
+            self.logger.error(
+                "Error during check_and_notify", error=str(e), exc_info=True
+            )
         finally:
             db.close()
 
@@ -128,12 +131,12 @@ class RecommendedTodosNotifier:
         self.logger.info(
             "Starting notifier service",
             check_interval=self.check_interval,
-            webhook_url=self.webhook_url or "Not configured"
+            webhook_url=self.webhook_url or "Not configured",
         )
         last_run = time.time()
         while self.running:
             await asyncio.sleep(1)
-            if self.check_interval < time.time()-last_run:
+            if self.check_interval < time.time() - last_run:
                 await self.check_and_notify()
                 last_run = time.time()
 
@@ -145,5 +148,3 @@ class RecommendedTodosNotifier:
 
 # Global notifier instance
 notifier = RecommendedTodosNotifier(CONFIG.notification_webhook_url)
-
-

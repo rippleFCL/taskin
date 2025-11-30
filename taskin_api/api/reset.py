@@ -1,4 +1,3 @@
-from operator import le
 from fastapi import APIRouter, Depends
 import requests
 from sqlalchemy.orm import Session
@@ -11,6 +10,7 @@ from models import (
     TaskReport,
 )
 from config_loader import CONFIG
+
 router = APIRouter()
 
 
@@ -61,9 +61,14 @@ def reset_all_todos(db: Session = Depends(get_db)):
         if todo.reset_count == 0:
             # Calculate in-progress duration (cumulative + current session if still in progress)
             in_progress_duration = todo.cumulative_in_progress_seconds
-            if todo.status == TaskStatus.in_progress and todo.in_progress_start is not None:
+            if (
+                todo.status == TaskStatus.in_progress
+                and todo.in_progress_start is not None
+            ):
                 # Still in progress, add current session duration
-                current_session = (datetime.now() - todo.in_progress_start).total_seconds()
+                current_session = (
+                    datetime.now() - todo.in_progress_start
+                ).total_seconds()
                 in_progress_duration += current_session
 
             # Use None if no time was spent in progress
@@ -127,69 +132,89 @@ def reset_all_todos(db: Session = Depends(get_db)):
 
     db.commit()
 
-    reports = (
-        db.query(Report)
-        .order_by(Report.created_at.desc())
-        .limit(30+1).all()
-    )
+    reports = db.query(Report).order_by(Report.created_at.desc()).limit(30 + 1).all()
     if CONFIG.warning:
         daily_config = CONFIG.warning.daily
         weekly_config = CONFIG.warning.weekly
-        last_week_avg_comp_rate = generate_aggregated_avg_comp_rate(reports[:7])*100
+        last_week_avg_comp_rate = generate_aggregated_avg_comp_rate(reports[:7]) * 100
         if last_week_avg_comp_rate < weekly_config.critical.threshold:
-            requests.post(str(weekly_config.webhook_url), json={
-                "message" : weekly_config.critical.message,
-                "average_completion_rate": f"{last_week_avg_comp_rate:.2f}%",
-                "color": "15548997"
-            }, timeout=5)
+            requests.post(
+                str(weekly_config.webhook_url),
+                json={
+                    "message": weekly_config.critical.message,
+                    "average_completion_rate": f"{last_week_avg_comp_rate:.2f}%",
+                    "color": "15548997",
+                },
+                timeout=5,
+            )
         elif last_week_avg_comp_rate < weekly_config.warning.threshold:
-            requests.post(str(weekly_config.webhook_url), json={
-                "message" : weekly_config.warning.message,
-                "average_completion_rate": f"{last_week_avg_comp_rate:.2f}%",
-                "color": "15105570"
-            }, timeout=5)
+            requests.post(
+                str(weekly_config.webhook_url),
+                json={
+                    "message": weekly_config.warning.message,
+                    "average_completion_rate": f"{last_week_avg_comp_rate:.2f}%",
+                    "color": "15105570",
+                },
+                timeout=5,
+            )
         else:
-            requests.post(str(weekly_config.webhook_url), json={
-                "message" : weekly_config.info_message,
-                "average_completion_rate": f"{last_week_avg_comp_rate:.2f}%",
-                "color": "5763719"
-            }, timeout=5)
+            requests.post(
+                str(weekly_config.webhook_url),
+                json={
+                    "message": weekly_config.info_message,
+                    "average_completion_rate": f"{last_week_avg_comp_rate:.2f}%",
+                    "color": "5763719",
+                },
+                timeout=5,
+            )
         if len(reports) >= 2:
-            last_month_avg_comp_rate = generate_aggregated_avg_comp_rate(reports[1:])*100
-            today_avg_comp_rate = generate_aggregated_avg_comp_rate(reports[:1])*100
+            last_month_avg_comp_rate = (
+                generate_aggregated_avg_comp_rate(reports[1:]) * 100
+            )
+            today_avg_comp_rate = generate_aggregated_avg_comp_rate(reports[:1]) * 100
             if last_month_avg_comp_rate != 0:
-                percentage_change = (today_avg_comp_rate / last_month_avg_comp_rate - 1) * 100
+                percentage_change = (
+                    today_avg_comp_rate / last_month_avg_comp_rate - 1
+                ) * 100
             else:
                 percentage_change = 0
 
             if percentage_change < daily_config.critical.threshold:
-                requests.post(str(daily_config.webhook_url), json={
-                    "message" : daily_config.critical.message,
-                    "today_completion_rate": f"{today_avg_comp_rate:.2f}%",
-                    "percentage_change": f"{percentage_change:.2f}%",
-                    "month_avg_completion_rate": f"{last_month_avg_comp_rate:.2f}%",
-                    "color": "15548997"
-
-                }, timeout=5)
+                requests.post(
+                    str(daily_config.webhook_url),
+                    json={
+                        "message": daily_config.critical.message,
+                        "today_completion_rate": f"{today_avg_comp_rate:.2f}%",
+                        "percentage_change": f"{percentage_change:.2f}%",
+                        "month_avg_completion_rate": f"{last_month_avg_comp_rate:.2f}%",
+                        "color": "15548997",
+                    },
+                    timeout=5,
+                )
             elif percentage_change < daily_config.warning.threshold:
-                requests.post(str(daily_config.webhook_url), json={
-                    "message" : daily_config.warning.message,
-                    "today_completion_rate": f"{today_avg_comp_rate:.2f}%",
-                    "percentage_change": f"{percentage_change:.2f}%",
-                    "month_avg_completion_rate": f"{last_month_avg_comp_rate:.2f}%",
-                    "color": "15105570"
-                }, timeout=5)
+                requests.post(
+                    str(daily_config.webhook_url),
+                    json={
+                        "message": daily_config.warning.message,
+                        "today_completion_rate": f"{today_avg_comp_rate:.2f}%",
+                        "percentage_change": f"{percentage_change:.2f}%",
+                        "month_avg_completion_rate": f"{last_month_avg_comp_rate:.2f}%",
+                        "color": "15105570",
+                    },
+                    timeout=5,
+                )
             else:
-                requests.post(str(daily_config.webhook_url), json={
-                    "message" : daily_config.info_message,
-                    "today_completion_rate": f"{today_avg_comp_rate:.2f}%",
-                    "percentage_change": f"{percentage_change:.2f}%",
-                    "month_avg_completion_rate": f"{last_month_avg_comp_rate:.2f}%",
-                    "color": "5763719"
-                }, timeout=5)
-
-
-
+                requests.post(
+                    str(daily_config.webhook_url),
+                    json={
+                        "message": daily_config.info_message,
+                        "today_completion_rate": f"{today_avg_comp_rate:.2f}%",
+                        "percentage_change": f"{percentage_change:.2f}%",
+                        "month_avg_completion_rate": f"{last_month_avg_comp_rate:.2f}%",
+                        "color": "5763719",
+                    },
+                    timeout=5,
+                )
 
     return {
         "total": len(todos),

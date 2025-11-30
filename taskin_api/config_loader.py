@@ -1,12 +1,13 @@
 import os
 
-from pydantic.types import T
 import yaml
 from pydantic import BaseModel, Field, HttpUrl, ValidationError
+
 
 class WarningValueConfig(BaseModel):
     threshold: int
     message: str
+
 
 class WarningDataConfig(BaseModel):
     info_message: str
@@ -14,14 +15,15 @@ class WarningDataConfig(BaseModel):
     critical: WarningValueConfig
     webhook_url: HttpUrl
 
+
 class WarningConfig(BaseModel):
     weekly: WarningDataConfig
     daily: WarningDataConfig
 
+
 class TimeDependency(BaseModel):
     start: int | None = None
     end: int | None = None
-
 
 
 class TodoConfig(BaseModel):
@@ -34,14 +36,17 @@ class TodoConfig(BaseModel):
     depends_on_events: dict[str, TimeDependency] = Field(default_factory=dict)
     reset_interval: int = 1  # Reset every N days (1 = daily)
 
+
 class CategoryConfig(BaseModel):
     name: str
     description: str | None = None
     todos: list[TodoConfig] = Field(default_factory=list)
 
+
 class OneOffTodoConfig(BaseModel):
     depends_on_todos: list[str] = Field(default_factory=list)
     depends_on_categories: list[str] = Field(default_factory=list)
+
 
 class AppConfig(BaseModel):
     notification_webhook_url: HttpUrl | None = None
@@ -49,6 +54,7 @@ class AppConfig(BaseModel):
     warning: WarningConfig | None = None
     categories: list[CategoryConfig] = Field(default_factory=list)
     oneoff_deps: OneOffTodoConfig = Field(default_factory=OneOffTodoConfig)
+
 
 _CONFIG_PATH: str = "config.yml"
 

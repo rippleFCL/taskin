@@ -15,6 +15,7 @@ from config_loader import TimeDependency
 
 router = APIRouter()
 
+
 def in_timeslot(time_dependency: TimeDependency, current_seconds: float) -> bool:
     """Check if the current time in seconds is within the time dependency slot."""
     if time_dependency.start is not None:
@@ -27,7 +28,11 @@ def in_timeslot(time_dependency: TimeDependency, current_seconds: float) -> bool
 
 
 @router.get("/dependency-graph", response_model=DependencyGraph)
-def get_dependency_graph(db: Session = Depends(get_db), graph_type: str = Query("scoped", enum=["full", "scoped"]), filter_time_deps: bool = Query(False)):
+def get_dependency_graph(
+    db: Session = Depends(get_db),
+    graph_type: str = Query("scoped", enum=["full", "scoped"]),
+    filter_time_deps: bool = Query(False),
+):
     """
     Get the complete dependency graph showing relationships between all todos.
     Returns nodes (todos and categories) and edges (dependency relationships).
@@ -36,14 +41,15 @@ def get_dependency_graph(db: Session = Depends(get_db), graph_type: str = Query(
     # Get all todos and categories
     todos = db.query(Todo).all()
     categories = db.query(Category).all()
-    oneoffs = db.query(OneOffTodo).filter(OneOffTodo.status != TaskStatus.complete).all()
+    oneoffs = (
+        db.query(OneOffTodo).filter(OneOffTodo.status != TaskStatus.complete).all()
+    )
     if graph_type == "scoped":
         unready_todos = db.query(Todo.id).filter(Todo.reset_count > 0).all()
         unready_ids = {tid for (tid,) in unready_todos}
         graph = dep_man.scope_subgraph(unready_ids)
     else:
         graph = dep_man.full_graph
-
 
     nodes: list[DependencyNode] = []
     edges: list[DependencyEdge] = []
@@ -55,7 +61,9 @@ def get_dependency_graph(db: Session = Depends(get_db), graph_type: str = Query(
     todo_id_map: dict[int, int] = {}
     category_id_map: dict[int, int] = {}
     current_time = datetime.now()
-    seconds_into_day = (current_time - current_time.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds()
+    seconds_into_day = (
+        current_time - current_time.replace(hour=0, minute=0, second=0, microsecond=0)
+    ).total_seconds()
 
     filter_time_dep_ids: set[int] = set()
     # Add todo nodes
@@ -76,7 +84,11 @@ def get_dependency_graph(db: Session = Depends(get_db), graph_type: str = Query(
                 if not in_timeslot(tdep, seconds_since_event):
                     within_time_window = False
 
-        if filter_time_deps and not within_time_window and todo.status not in (TaskStatus.complete, TaskStatus.skipped):
+        if (
+            filter_time_deps
+            and not within_time_window
+            and todo.status not in (TaskStatus.complete, TaskStatus.skipped)
+        ):
             filter_time_dep_ids.add(todo.id)
             continue
         if todo.status == TaskStatus.complete:
@@ -92,16 +104,12 @@ def get_dependency_graph(db: Session = Depends(get_db), graph_type: str = Query(
             color = None
         nodes.append(
             DependencyNode(
-                id=nid,
-                title=todo.title,
-                node_type=NodeType.todo,
-                boarder_color=color
+                id=nid, title=todo.title, node_type=NodeType.todo, boarder_color=color
             )
         )
         nid_categories[nid] = todo.category.name if todo.category else "Uncategorised"
         todo_id_map[todo.id] = nid
         nid += 1
-
 
     if filter_time_deps:
         graph = graph.filter_out(filter_time_dep_ids)
@@ -198,7 +206,9 @@ def get_dependency_graph(db: Session = Depends(get_db), graph_type: str = Query(
                     )
                 )
             else:
-                print(f"Warning: Category dependency id {cat_dep} not found in category_id_map")
+                print(
+                    f"Warning: Category dependency id {cat_dep} not found in category_id_map"
+                )
     for cat_id, cat_node in graph.categories.items():
         if not cat_node.dependants:
             # No dependants, connect to end
@@ -219,7 +229,9 @@ def get_dependency_graph(db: Session = Depends(get_db), graph_type: str = Query(
                     )
                 )
             else:
-                print(f"Warning: Category dependency todo id {dep_cat_id} not found in category_id_map")
+                print(
+                    f"Warning: Category dependency todo id {dep_cat_id} not found in category_id_map"
+                )
 
     # Handle oneoff dependencies
     oneoff_node = graph.nodes.get(dep_man.ONEOFF_START_ID)

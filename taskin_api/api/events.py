@@ -7,8 +7,10 @@ from schemas import EventResponse
 
 router = APIRouter()
 
+
 class EventTriggerResponse(BaseModel):
     message: str
+
 
 @router.get("/event-list", response_model=list[EventResponse])
 def get_event_list(db: Session = Depends(get_db)):
@@ -16,8 +18,13 @@ def get_event_list(db: Session = Depends(get_db)):
     events = db.query(Event).all()
     return events
 
+
 @router.post("/events/{event_name}", response_model=EventTriggerResponse)
-def trigger_event(event_name: str, db: Session = Depends(get_db), timestamp: datetime.datetime | None = Query(None)):
+def trigger_event(
+    event_name: str,
+    db: Session = Depends(get_db),
+    timestamp: datetime.datetime | None = Query(None),
+):
     """Trigger an event by name"""
 
     event = db.query(Event).filter(Event.name == event_name).first()
@@ -30,4 +37,6 @@ def trigger_event(event_name: str, db: Session = Depends(get_db), timestamp: dat
     db.commit()
     db.refresh(event)
     # Here you would add logic to handle the event triggering
-    return EventTriggerResponse(message=f"Event '{event_name}' triggered successfully. event timestamp set to {event.timestamp}")
+    return EventTriggerResponse(
+        message=f"Event '{event_name}' triggered successfully. event timestamp set to {event.timestamp}"
+    )
