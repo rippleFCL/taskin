@@ -26,6 +26,20 @@ class TimeDependency(BaseModel):
     end: int | None = None
 
 
+class ComputeTimeConfig(BaseModel):
+    name: str
+    src_event: str
+    end_time: int
+    sections: int
+    minimum_window: int
+    offset_seconds: int = 0
+
+
+class ComputeTimeDependency(BaseModel):
+    name: str
+    index: int
+
+
 class TodoConfig(BaseModel):
     title: str
     description: str | None = None
@@ -34,6 +48,7 @@ class TodoConfig(BaseModel):
     depends_on_all_oneoffs: bool = False
     depends_on_time: TimeDependency = TimeDependency()
     depends_on_events: dict[str, TimeDependency] = Field(default_factory=dict)
+    depends_on_compute_times: list[ComputeTimeDependency] = Field(default_factory=list)
     reset_interval: int = 1  # Reset every N days (1 = daily)
 
 
@@ -54,6 +69,7 @@ class AppConfig(BaseModel):
     warning: WarningConfig | None = None
     categories: list[CategoryConfig] = Field(default_factory=list)
     oneoff_deps: OneOffTodoConfig = Field(default_factory=OneOffTodoConfig)
+    computed_times: list[ComputeTimeConfig] = Field(default_factory=list)
 
 
 _CONFIG_PATH: str = "config.yml"

@@ -61,9 +61,6 @@ def get_dependency_graph(
     todo_id_map: dict[int, int] = {}
     category_id_map: dict[int, int] = {}
     current_time = datetime.now()
-    seconds_into_day = (
-        current_time - current_time.replace(hour=0, minute=0, second=0, microsecond=0)
-    ).total_seconds()
 
     filter_time_dep_ids: set[int] = set()
     # Add todo nodes
@@ -71,18 +68,15 @@ def get_dependency_graph(
         if todo.id not in graph.nodes:
             continue  # Skip todos not in the graph (e.g., completed todos)
 
-        time_dep = dep_man.time_dep_map[todo.id]
+        # Use computed timeslots from dependency manager
         within_time_window = True
-        time_dep = dep_man.time_dep_map[todo.id]
-        if not in_timeslot(time_dep, seconds_into_day):
-            within_time_window = False
-        time_deps = dep_man.event_dep_map.get(todo.id, {})
-        for event_name, tdep in time_deps.items():
-            event = db.query(Event).filter(Event.name == event_name).first()
-            if event:
-                seconds_since_event = (current_time - event.timestamp).total_seconds()
-                if not in_timeslot(tdep, seconds_since_event):
-                    within_time_window = False
+        ts_map = dep_man.get_timeslots(db.query(Event).all())
+        ts = ts_map.get(todo.id)
+        if ts:
+            if ts.start and current_time < ts.start:
+                within_time_window = False
+            if ts.end and current_time > ts.end:
+                within_time_window = False
 
         if (
             filter_time_deps

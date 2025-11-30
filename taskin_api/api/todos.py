@@ -112,24 +112,22 @@ def get_recommended_todos(db: Session = Depends(get_db)):
 
     # Get incomplete/in-progress todo IDs (these are blocking)
     current_time = datetime.now()
-    seconds_into_day = (
-        current_time - current_time.replace(hour=0, minute=0, second=0, microsecond=0)
-    ).total_seconds()
+    # Current time used to evaluate computed timeslots
 
+    # Use computed timeslots (deprecated maps removed)
+    events = db.query(Event).all()
+    timeslots = dep_man.get_timeslots(events)
     blocking_todo_ids = set()
     for todo in incomplete_todos:
-        time_dep = dep_man.time_dep_map[todo.id]
-        if not in_timeslot(time_dep, seconds_into_day):
+        ts = timeslots.get(todo.id)
+        if not ts:
             continue
-        time_deps = dep_man.event_dep_map.get(todo.id, {})
-        for event_name, tdep in time_deps.items():
-            event = db.query(Event).filter(Event.name == event_name).first()
-            if event:
-                seconds_since_event = (current_time - event.timestamp).total_seconds()
-                if not in_timeslot(tdep, seconds_since_event):
-                    break
-        else:
-            blocking_todo_ids.add(todo.id)
+        # If a timeslot exists, check current time within [start, end]
+        if ts.start and current_time < ts.start:
+            continue
+        if ts.end and current_time > ts.end:
+            continue
+        blocking_todo_ids.add(todo.id)
 
     # Check if there are any incomplete oneoffs
     has_incomplete_oneoffs = (
@@ -157,7 +155,6 @@ def get_recommended_todos(db: Session = Depends(get_db)):
             if has_incomplete_oneoffs:
                 # Oneoffs not complete yet
                 continue
-        time_dep = dep_man.time_dep_map[todo.id]
 
         # All dependencies satisfied!
         recommended.append(todo)

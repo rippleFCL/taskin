@@ -35,6 +35,8 @@ def sync_db_from_config(db: Session):
             config_todos[key] = todo_data
             for event_data in todo_data.depends_on_events.keys():
                 config_event_names.add(event_data)
+    for compute_time in config.computed_times:
+        config_event_names.add(compute_time.src_event)
 
     # Get existing data from database
     existing_categories = {cat.name: cat for cat in db.query(Category).all()}

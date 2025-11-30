@@ -3,7 +3,7 @@ import datetime
 # from models import Category, Todo
 from dataclasses import dataclass
 
-from config_loader import CONFIG, AppConfig, TimeDependency
+from config_loader import CONFIG, AppConfig, ComputeTimeConfig, TimeDependency
 from models import Category, Event
 from schemas import Timeslot
 
@@ -381,6 +381,48 @@ class Graph:
         return new_graph
 
 
+class ComputedTime:
+    def __init__(self, time_spaces: list[int], event_name: str):
+        self.time_spaces = time_spaces
+        self.event_name = event_name
+
+    @classmethod
+    def from_config(
+        cls, config: ComputeTimeConfig, events: dict[str, Event]
+    ) -> "ComputedTime":
+        if config.src_event not in events:
+            raise ValueError(f"Event {config.src_event} not found for computed time")
+        event = events[config.src_event]
+        # convert event timestamp to int minutes
+        event_start_of_day = event.timestamp.replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+        # minutes since start of day that event occurred
+        event_trigger_seconds = int(
+            (event.timestamp - event_start_of_day).total_seconds()
+        )
+
+        total_duration = (
+            config.end_time - event_trigger_seconds
+        ) - config.offset_seconds
+        section_duration = total_duration // config.sections
+        time_spaces = []
+        if total_duration >= config.minimum_window:
+            for i in range(config.sections):
+                section_start = i * section_duration + config.offset_seconds
+                time_spaces.append(section_start)
+
+        else:
+            for i in range(config.sections):
+                time_spaces.append(0)
+        return cls(time_spaces, event_name=event.name)
+
+    def get_time_for_index(self, index: int) -> int:
+        if index < 0 or index >= len(self.time_spaces):
+            raise IndexError("Computed time index out of range")
+        return self.time_spaces[index]
+
+
 class DependencyManager:
     ONEOFF_START_ID = -1000  # Starting node id for one-off todos
     ONEOFF_END_ID = -1999  # Ending node id for one-off todos
@@ -390,11 +432,19 @@ class DependencyManager:
         self.full_graph = Graph()
         self.todo_id_map: dict[str, int] = {}
         self.category_id_map: dict[str, int] = {}
-        self.time_dep_map: dict[int, TimeDependency] = {}
-        self.event_dep_map: dict[int, dict[str, TimeDependency]] = {}
         self.event_id_map: dict[str, int] = {}
 
     def get_timeslots(self, events: list[Event]):
+        computed_times: dict[str, ComputedTime] = {}
+
+        for compute_time in self.config.computed_times:
+            try:
+                computed_times[compute_time.name] = ComputedTime.from_config(
+                    compute_time, {event.name: event for event in events}
+                )
+            except ValueError:
+                continue
+
         todo_timeslot: dict[int, Timeslot] = {}
         event_time_map = {event.name: event.timestamp for event in events}
         for category in self.config.categories:
@@ -424,7 +474,19 @@ class DependencyManager:
                         if time_slot_end is None or dep_end < time_slot_end:
                             time_slot_end = dep_end
 
-                for event_name, event_time_dep in todo.depends_on_events.items():
+                modified_events = todo.depends_on_events.copy()
+                for compute_dep in todo.depends_on_compute_times:
+                    compute_time = computed_times.get(compute_dep.name)
+                    if not compute_time:
+                        continue
+                    computed_minute = compute_time.get_time_for_index(compute_dep.index)
+
+                    modified_events[compute_time.event_name] = TimeDependency(
+                        start=computed_minute,
+                        end=None,
+                    )
+
+                for event_name, event_time_dep in modified_events.items():
                     event_timestamp = event_time_map.get(event_name)
                     if not event_timestamp:
                         continue
@@ -475,13 +537,7 @@ class DependencyManager:
                 todo_id = self.todo_id_map.get(todo.title)
                 if not todo_id:
                     continue
-                self.time_dep_map[self.todo_id_map[todo.title]] = todo.depends_on_time
-                for dep_event, time_dep in todo.depends_on_events.items():
-                    event_id = self.event_id_map.get(dep_event)
-                    if event_id:
-                        if todo_id not in self.event_dep_map:
-                            self.event_dep_map[todo_id] = {}
-                        self.event_dep_map[todo_id][dep_event] = time_dep
+
                 for dep in todo.depends_on_todos:
                     dep_id = self.todo_id_map.get(dep)
                     if dep_id:
