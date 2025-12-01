@@ -453,7 +453,11 @@ class DependencyManager:
                 if not todo_id:
                     continue
                 time_dep = todo.depends_on_time
-                if not ((time_dep.start or time_dep.end) or todo.depends_on_events):
+                if not (
+                    (time_dep.start or time_dep.end)
+                    or todo.depends_on_events
+                    or todo.depends_on_compute_times
+                ):
                     continue
 
                 now = datetime.datetime.now()
