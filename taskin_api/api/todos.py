@@ -121,6 +121,7 @@ def get_recommended_todos(db: Session = Depends(get_db)):
     for todo in incomplete_todos:
         ts = timeslots.get(todo.id)
         if not ts:
+            blocking_todo_ids.add(todo.id)
             continue
         # If a timeslot exists, check current time within [start, end]
         if ts.start and current_time < ts.start:
