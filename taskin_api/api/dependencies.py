@@ -135,9 +135,9 @@ def get_dependency_graph(
         nid += 1
 
     # Control nodes
+    start_nid_name = "Wake up"
+    end_nid_name = "Go to sleep"
     one_off_cat_nid = nid
-    start_node_nid = nid + 1
-    end_node_nid = nid + 2
     oneoff_start_nid = nid + 3
 
     nodes.append(
@@ -147,29 +147,23 @@ def get_dependency_graph(
             node_type=NodeType.category,
         )
     )
-    nodes.append(
-        DependencyNode(
-            id=start_node_nid,
-            title="Wake up",
-            node_type=NodeType.control,
-        )
-    )
-    nodes.append(
-        DependencyNode(
-            id=end_node_nid,
-            title="Go to sleep",
-            node_type=NodeType.control,
-        )
-    )
 
     for tid, node in graph.nodes.items():
         if tid == dep_man.ONEOFF_START_ID:
             continue  # Handled separately
         if not (node.cat_dependencies or node.dependencies):
             # No dependencies, connect to start
+            nid += 1
+            nodes.append(
+                DependencyNode(
+                    id=nid,
+                    title=start_nid_name,
+                    node_type=NodeType.control,
+                )
+            )
             edges.append(
                 DependencyEdge(
-                    from_node_id=start_node_nid,
+                    from_node_id=nid,
                     to_node_id=todo_id_map[tid],
                 )
             )
@@ -206,10 +200,18 @@ def get_dependency_graph(
     for cat_id, cat_node in graph.categories.items():
         if not cat_node.dependants and cat_id in category_id_map:
             # No dependants, connect to end
+            nid += 1
+            nodes.append(
+                DependencyNode(
+                    id=nid,
+                    title=end_nid_name,
+                    node_type=NodeType.control,
+                )
+            )
             edges.append(
                 DependencyEdge(
                     from_node_id=category_id_map[cat_id],
-                    to_node_id=end_node_nid,
+                    to_node_id=nid,
                 )
             )
         for dep_cat_id in cat_node.dependencies:
@@ -276,9 +278,17 @@ def get_dependency_graph(
                     )
         else:
             # No dependencies, connect to start
+            nid += 1
+            nodes.append(
+                DependencyNode(
+                    id=nid,
+                    title=start_nid_name,
+                    node_type=NodeType.control,
+                )
+            )
             edges.append(
                 DependencyEdge(
-                    from_node_id=start_node_nid,
+                    from_node_id=nid,
                     to_node_id=target_nid,
                 )
             )
@@ -286,10 +296,19 @@ def get_dependency_graph(
         # Check if anything depends on oneoffs
         oneoff_category = graph.categories.get(dep_man.ONEOFF_END_ID)
         if oneoff_category and not oneoff_category.dependants:
+            # No dependants, connect to end
+            nid += 1
+            nodes.append(
+                DependencyNode(
+                    id=nid,
+                    title=end_nid_name,
+                    node_type=NodeType.control,
+                )
+            )
             edges.append(
                 DependencyEdge(
                     from_node_id=one_off_cat_nid,
-                    to_node_id=end_node_nid,
+                    to_node_id=nid,
                 )
             )
 
