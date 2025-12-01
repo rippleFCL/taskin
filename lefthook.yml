@@ -1,14 +1,17 @@
 pre-commit:
   parallel: true
+  follow: true
   commands:
     ruff-lint:
       root: "taskin_api/"
       glob: "*.py"
       run: ruff check {staged_files} --fix
+      stage_fixed: true
     ruff-format:
       root: "taskin_api/"
       glob: "*.py"
       run: ruff format {staged_files}
+      stage_fixed: true
     pyright:
       root: "taskin_api/"
       glob: "*.py"
