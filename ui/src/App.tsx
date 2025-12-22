@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useLocation, useNavigate, Routes, Route, Navigate } from 'react-router-dom';
 import { CategoryWithTodos, TodoWithCategory, TaskStatus, OneOffTodo, Timeslot } from './types';
 import { api } from './api';
-import { RefreshCw, RotateCcw, ListTodo, Sparkles, Moon, Sun, Plus, Menu, Network, FileText } from 'lucide-react';
+import { RefreshCw, RotateCcw, ListTodo, Sparkles, Moon, Sun, Plus, Menu, Network, FileText, Settings } from 'lucide-react';
 import { Collapsible, CollapsibleContent } from './components/ui/collapsible';
 import { NavigationMenu, NavigationMenuItem, NavigationMenuList } from './components/ui/navigation-menu';
 import { Button } from './components/ui/button';
@@ -12,6 +12,7 @@ import RecommendedPage from './pages/RecommendedPage';
 import GraphPage from './pages/GraphPage';
 import OneOffsPage from './pages/OneOffsPage';
 import ReportsPage from './pages/ReportsPage';
+import SettingsPage from './pages/SettingsPage';
 
 function App() {
     const [categories, setCategories] = useState<CategoryWithTodos[]>([]);
@@ -25,7 +26,7 @@ function App() {
     const location = useLocation();
     const navigate = useNavigate();
     const path = location.pathname;
-    const currentTab: 'all' | 'recommended' | 'oneoff' | 'graph' | 'reports' = path.startsWith('/all')
+    const currentTab: 'all' | 'recommended' | 'oneoff' | 'graph' | 'reports' | 'settings' = path.startsWith('/all')
         ? 'all'
         : path.startsWith('/oneoff')
             ? 'oneoff'
@@ -33,7 +34,9 @@ function App() {
                 ? 'graph'
                 : path.startsWith('/reports')
                     ? 'reports'
-                    : 'recommended';
+                    : path.startsWith('/settings')
+                        ? 'settings'
+                        : 'recommended';
     const [error, setError] = useState<string | null>(null);
     const [pendingQueue, setPendingQueue] = useState<Array<{ id: number; status: TaskStatus }>>([]);
     const [oneOffs, setOneOffs] = useState<OneOffTodo[]>([]);
@@ -249,7 +252,7 @@ function App() {
     useEffect(() => {
         if (location.pathname === '/') {
             const last = localStorage.getItem('taskin_last_tab');
-            const target = (last === 'all' || last === 'oneoff' || last === 'recommended' || last === 'graph' || last === 'reports') ? last : 'recommended';
+            const target = (last === 'all' || last === 'oneoff' || last === 'recommended' || last === 'graph' || last === 'reports' || last === 'settings') ? last : 'recommended';
             navigate(`/${target}`, { replace: true });
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -709,6 +712,13 @@ function App() {
                                     <FileText className="w-4 h-4" />
                                     <span>Reports</span>
                                 </button>
+                                <button
+                                    onClick={() => { navigate('/settings'); setNavOpen(false); }}
+                                    className={`w-full justify-center flex items-center gap-2 px-3 py-3 rounded-md border transition-colors ${currentTab === 'settings' ? 'border-primary text-primary' : 'text-foreground hover:bg-accent'} `}
+                                >
+                                    <Settings className="w-4 h-4" />
+                                    <span>Settings</span>
+                                </button>
                             </div>
                         </CollapsibleContent>
                     </Collapsible>
@@ -762,6 +772,15 @@ function App() {
                                         Reports
                                     </button>
                                 </NavigationMenuItem>
+                                <NavigationMenuItem>
+                                    <button
+                                        onClick={() => navigate('/settings')}
+                                        className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-md ${currentTab === 'settings' ? 'bg-accent text-accent-foreground' : 'hover:bg-accent hover:text-accent-foreground'}`}
+                                    >
+                                        <Settings className="w-4 h-4" />
+                                        Settings
+                                    </button>
+                                </NavigationMenuItem>
                             </NavigationMenuList>
                         </NavigationMenu>
                         <button
@@ -790,6 +809,7 @@ function App() {
                     <Route path="/recommended" element={<RecommendedPage todos={recommendedTodos} oneOffs={recommendedOneOffs} onStatusChange={handleStatusChange} onOneOffStatusChange={handleOneOffStatusChange} timeslots={timeslots} />} />
                     <Route path="/graph" element={<GraphPage />} />
                     <Route path="/reports" element={<ReportsPage />} />
+                    <Route path="/settings" element={<SettingsPage />} />
                     <Route path="/oneoff" element={<OneOffsPage
                         oneOffs={oneOffs}
                         sortedOneOffs={sortedOneOffs}

@@ -11,6 +11,7 @@ from models import (
     get_db,
 )
 from schemas import Timeslot, TodoResponse, TodoWithCategory
+from settings import SettingsConfig, get_settings_config
 from sqlalchemy.orm import Session
 
 router = APIRouter()
@@ -90,7 +91,10 @@ def in_timeslot(time_dependency: TimeDependency, current_seconds: float) -> bool
 
 
 @router.get("/recommended-todos", response_model=list[TodoWithCategory])
-def get_recommended_todos(db: Session = Depends(get_db)):
+def get_recommended_todos(
+    db: Session = Depends(get_db),
+    settings: SettingsConfig = Depends(get_settings_config),
+):
     """
     Get todos that are ready to work on (all dependencies satisfied).
     A todo is recommended if:
@@ -120,14 +124,15 @@ def get_recommended_todos(db: Session = Depends(get_db)):
     blocking_todo_ids = set()
     for todo in incomplete_todos:
         ts = timeslots.get(todo.id)
-        if not ts:
-            blocking_todo_ids.add(todo.id)
+        if ts:
+            # If a timeslot exists, check current time within [start, end]
+            if ts.start and current_time < ts.start:
+                continue
+            if ts.end and current_time > ts.end:
+                continue
+        if todo.dead_priority < settings.dead_value:
             continue
-        # If a timeslot exists, check current time within [start, end]
-        if ts.start and current_time < ts.start:
-            continue
-        if ts.end and current_time > ts.end:
-            continue
+
         blocking_todo_ids.add(todo.id)
 
     # Check if there are any incomplete oneoffs

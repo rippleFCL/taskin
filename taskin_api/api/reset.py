@@ -10,6 +10,7 @@ from models import (
     Todo,
     get_db,
 )
+from settings import SettingsConfig, get_settings_config
 from sqlalchemy.orm import Session
 
 router = APIRouter()
@@ -27,7 +28,10 @@ def generate_aggregated_avg_comp_rate(reports: list[Report]) -> float:
 
 
 @router.post("/reset")
-def reset_all_todos(db: Session = Depends(get_db)):
+def reset_all_todos(
+    db: Session = Depends(get_db),
+    settings: SettingsConfig = Depends(get_settings_config),
+):
     """
     Reset todos to incomplete status based on their reset_interval.
     - Skipped todos ALWAYS reset (reset_interval ignored)
@@ -59,7 +63,7 @@ def reset_all_todos(db: Session = Depends(get_db)):
 
     # Process each todo and create task reports
     for todo in todos:
-        if todo.reset_count == 0:
+        if todo.reset_count == 0 and todo.dead_priority >= settings.dead_value:
             # Calculate in-progress duration (cumulative + current session if still in progress)
             in_progress_duration = todo.cumulative_in_progress_seconds
             if (

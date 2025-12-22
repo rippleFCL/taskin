@@ -71,9 +71,6 @@ class Todo(Base):
     )
     reset_interval: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     reset_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    position: Mapped[int] = mapped_column(
-        Integer, default=0, nullable=False
-    )  # Position within category for implicit deps
 
     # Status transition tracking for statistics
     in_progress_start: Mapped[datetime | None] = mapped_column(
@@ -82,9 +79,21 @@ class Todo(Base):
     cumulative_in_progress_seconds: Mapped[float] = mapped_column(
         Float, default=0.0, nullable=False
     )  # Total time spent in-progress (cumulative across multiple sessions)
-
+    dead_priority: Mapped[int] = mapped_column(
+        Integer, default=10, nullable=False
+    )  # Priority for dead mode (higher = more important)
     # Relationship to category
     category: Mapped["Category"] = relationship(back_populates="todos")
+
+
+class Settings(Base):
+    """Settings model for storing application-wide settings"""
+
+    __tablename__ = "settings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    key: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    value: Mapped[str] = mapped_column(String, nullable=False)
 
 
 class Event(Base):

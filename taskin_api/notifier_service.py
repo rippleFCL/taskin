@@ -15,6 +15,7 @@ from api.todos import get_recommended_todos
 from config_loader import CONFIG
 from models import Todo, get_db
 from pydantic import HttpUrl
+from settings import DEFAULTS, SettingsConfig
 from sqlalchemy.orm import Session
 
 
@@ -46,7 +47,9 @@ class RecommendedTodosNotifier:
         Get the set of currently recommended todo IDs.
         """
         try:
-            recommended = get_recommended_todos(db=db)
+            recommended = get_recommended_todos(
+                db=db, settings=SettingsConfig(db, DEFAULTS)
+            )
             return {todo.id for todo in recommended}
         except Exception as e:
             self.logger.error("Failed to get recommended todos", error=str(e))

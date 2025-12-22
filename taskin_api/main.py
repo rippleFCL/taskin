@@ -4,7 +4,16 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 import structlog
-from api import categories, dependencies, events, oneoffs, reports, reset, todos
+from api import (
+    categories,
+    dependencies,
+    events,
+    oneoffs,
+    reports,
+    reset,
+    settings_api,
+    todos,
+)
 from db_init import initialize_database
 from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -100,6 +109,7 @@ api.include_router(dependencies.router, prefix="/api", tags=["dependencies"])
 api.include_router(reports.router, prefix="/api", tags=["reports"])
 api.include_router(reset.router, prefix="/api", tags=["reset"])
 api.include_router(events.router, prefix="/api", tags=["events"])
+api.include_router(settings_api.router, prefix="/api", tags=["settings"])
 
 
 @api.get("/api/health")

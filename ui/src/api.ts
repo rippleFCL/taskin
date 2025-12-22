@@ -130,4 +130,38 @@ export const api = {
     if (!response.ok) throw new Error('Failed to fetch event list');
     return response.json();
   },
+
+  // Settings
+  async getDeadValue(): Promise<number> {
+    const response = await fetch(`${API_BASE}/settings/dead-value`);
+    if (!response.ok) throw new Error('Failed to fetch DEAD_VALUE setting');
+    const data = await response.json();
+    const raw = (data as any)?.dead_value;
+    const num = typeof raw === 'number' ? raw : Number(raw);
+    if (!Number.isFinite(num)) throw new Error('Invalid DEAD_VALUE received from server');
+    return num;
+  },
+
+  async updateDeadValue(value: number): Promise<number> {
+    const response = await fetch(`${API_BASE}/settings/dead-value`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dead_value: value }),
+    });
+    if (!response.ok) {
+      let message = 'Failed to update DEAD_VALUE setting';
+      try {
+        const body = await response.json();
+        if (body && typeof body.detail === 'string') message = body.detail;
+      } catch {
+        // ignore JSON parse errors
+      }
+      throw new Error(message);
+    }
+    const data = await response.json();
+    const raw = (data as any)?.dead_value;
+    const num = typeof raw === 'number' ? raw : Number(raw);
+    if (!Number.isFinite(num)) throw new Error('Invalid DEAD_VALUE received from server');
+    return num;
+  },
 };

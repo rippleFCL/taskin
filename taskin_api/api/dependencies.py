@@ -11,6 +11,7 @@ from schemas import (
     NodeType,
     RGBColor,
 )
+from settings import SettingsConfig, get_settings_config
 from sqlalchemy.orm import Session
 
 router = APIRouter()
@@ -29,6 +30,7 @@ def in_timeslot(time_dependency: TimeDependency, current_seconds: float) -> bool
 
 @router.get("/dependency-graph", response_model=DependencyGraph)
 def get_dependency_graph(
+    settings: SettingsConfig = Depends(get_settings_config),
     db: Session = Depends(get_db),
     graph_type: str = Query("scoped", enum=["full", "scoped"]),
     filter_time_deps: bool = Query(False),
@@ -45,8 +47,12 @@ def get_dependency_graph(
         db.query(OneOffTodo).filter(OneOffTodo.status != TaskStatus.complete).all()
     )
     if graph_type == "scoped":
-        unready_todos = db.query(Todo.id).filter(Todo.reset_count > 0).all()
-        unready_ids = {tid for (tid,) in unready_todos}
+        unready_ids = set()
+        for todo in todos:
+            if todo.reset_count > 0:
+                unready_ids.add(todo.id)
+            if todo.dead_priority < settings.dead_value:
+                unready_ids.add(todo.id)
         graph = dep_man.scope_subgraph(unready_ids)
     else:
         graph = dep_man.full_graph

@@ -67,16 +67,9 @@ def sync_db_from_config(db: Session):
             category_map[category_name] = cat
 
     # 2. Sync todos - add new, update existing, and assign positions
-    for idx, ((category_name, todo_title), todo_data) in enumerate(
-        config_todos.items()
-    ):
+    for (category_name, todo_title), todo_data in config_todos.items():
         key = (category_name, todo_title)
         category = category_map[category_name]
-
-        # Calculate position within this category
-        # Position is the index of this todo within its category's todos
-        category_todos_list = [t for t in config_todos.keys() if t[0] == category_name]
-        position = category_todos_list.index((category_name, todo_title))
 
         if key in existing_todos:
             # Update existing todo (preserve status and reset_count!)
@@ -84,7 +77,7 @@ def sync_db_from_config(db: Session):
             todo.description = todo_data.description
             todo.category_id = category.id
             todo.reset_interval = todo_data.reset_interval
-            todo.position = position  # type: ignore
+            todo.dead_priority = todo_data.dead_priority
             # Status and reset_count are preserved from database
         else:
             # Create new todo with default status (incomplete)
@@ -95,7 +88,7 @@ def sync_db_from_config(db: Session):
                 category_id=category.id,
                 reset_interval=todo_data.reset_interval,
                 reset_count=0,
-                position=position,
+                dead_priority=todo_data.dead_priority,
             )
             db.add(todo)
 

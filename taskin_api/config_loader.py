@@ -49,6 +49,7 @@ class TodoConfig(BaseModel):
     depends_on_time: TimeDependency = TimeDependency()
     depends_on_events: dict[str, TimeDependency] = Field(default_factory=dict)
     depends_on_compute_times: list[ComputeTimeDependency] = Field(default_factory=list)
+    dead_priority: int = 10  # Higher value means higher priority for dead mode
     reset_interval: int = 1  # Reset every N days (1 = daily)
 
 
