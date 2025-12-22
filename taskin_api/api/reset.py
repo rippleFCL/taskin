@@ -60,11 +60,12 @@ def reset_all_todos(
     completed_todos = 0
     skipped_todos = 0
     incomplete_todos = 0
-
+    total_scheduled_todos = 0
     # Process each todo and create task reports
     for todo in todos:
         if todo.reset_count == 0 and todo.dead_priority >= settings.dead_value:
             # Calculate in-progress duration (cumulative + current session if still in progress)
+            total_scheduled_todos += 1
             in_progress_duration = todo.cumulative_in_progress_seconds
             if (
                 todo.status == TaskStatus.in_progress
@@ -134,9 +135,18 @@ def reset_all_todos(
     report.completed_todos = completed_todos
     report.skipped_todos = skipped_todos
     report.incomplete_todos = incomplete_todos
+    if CONFIG.wandering_dead.enabled:
+        if completed_todos > 0 and total_scheduled_todos > 0:
+            if (
+                completed_todos / total_scheduled_todos
+            ) * 100 >= CONFIG.wandering_dead.threshold:
+                settings.dead_value -= CONFIG.wandering_dead.decrease_by
+            else:
+                settings.dead_value += CONFIG.wandering_dead.increase_by
+        else:
+            settings.dead_value += CONFIG.wandering_dead.increase_by
 
     db.commit()
-
     reports = db.query(Report).order_by(Report.created_at.desc()).limit(30 + 1).all()
     if CONFIG.warning:
         daily_config = CONFIG.warning.daily

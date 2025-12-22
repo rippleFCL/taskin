@@ -64,7 +64,15 @@ class OneOffTodoConfig(BaseModel):
     depends_on_categories: list[str] = Field(default_factory=list)
 
 
+class WanderingDeadConfig(BaseModel):
+    enabled: bool = False
+    decrease_by: float = 1
+    increase_by: float = 1
+    threshold: float = 80
+
+
 class AppConfig(BaseModel):
+    wandering_dead: WanderingDeadConfig = Field(default_factory=WanderingDeadConfig)
     notification_webhook_url: HttpUrl | None = None
     webhook_url: HttpUrl | None = None
     warning: WarningConfig | None = None

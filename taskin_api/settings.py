@@ -22,23 +22,27 @@ class SettingsConfig:
         self.defaults = defaults
 
     @property
-    def dead_value(self) -> int:
+    def dead_value(self) -> float:
         data = (
             self.db_session.query(Settings)
             .filter(Settings.key == SettingsEnum.DEAD_VALUE.value)
             .first()
         )
         if data is None:
-            return int(self.defaults[SettingsEnum.DEAD_VALUE])
-        return int(data.value)
+            return float(self.defaults[SettingsEnum.DEAD_VALUE])
+        return float(data.value)
 
     @dead_value.setter
-    def dead_value(self, value: int):
+    def dead_value(self, value: float | int):
         setting = (
             self.db_session.query(Settings)
             .filter(Settings.key == SettingsEnum.DEAD_VALUE.value)
             .first()
         )
+        if value < 1:
+            value = 1
+        elif value > 10:
+            value = 10
         if setting:
             setting.value = str(value)
         else:

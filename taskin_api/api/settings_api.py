@@ -32,7 +32,7 @@ def get_dead_value(
     Returns the stored integer value, or the default if not yet set.
     """
 
-    return DeadValueResponse(dead_value=settings.dead_value)
+    return DeadValueResponse(dead_value=int(settings.dead_value))
 
 
 @router.put("/settings/dead-value", response_model=DeadValueResponse)
@@ -49,7 +49,7 @@ def update_dead_value(
             raise ValueError(
                 f"DEAD_VALUE must be between {DEAD_VALUE_MIN} and {DEAD_VALUE_MAX}"
             )
-        settings.dead_value = payload.dead_value
+        settings.dead_value = int(payload.dead_value)
     except ValueError as exc:  # defensive, in case of invalid conversions later
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return DeadValueResponse(dead_value=settings.dead_value)
+    return DeadValueResponse(dead_value=int(settings.dead_value))
