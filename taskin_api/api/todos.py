@@ -79,6 +79,31 @@ def update_todo_status(todo_id: int, status: TaskStatus, db: Session = Depends(g
     return db_todo
 
 
+@router.post("/todos/{todo_id}/reset-timer", response_model=TodoResponse)
+def reset_todo_timer(todo_id: int, db: Session = Depends(get_db)):
+    """Reset the in-progress timer for a todo.
+
+    This clears the cumulative in-progress seconds and restarts the current
+    in-progress session (if the task is currently in-progress).
+    """
+    db_todo = db.query(Todo).filter(Todo.id == todo_id).first()
+    if not db_todo:
+        raise HTTPException(status_code=404, detail="Todo not found")
+
+    # Reset accumulated time
+    db_todo.cumulative_in_progress_seconds = 0.0
+
+    # If currently in-progress, restart from now; otherwise clear start marker
+    if db_todo.status == TaskStatus.in_progress:
+        db_todo.in_progress_start = datetime.now()
+    else:
+        db_todo.in_progress_start = None
+
+    db.commit()
+    db.refresh(db_todo)
+    return db_todo
+
+
 def in_timeslot(time_dependency: TimeDependency, current_seconds: float) -> bool:
     """Check if the current time in seconds is within the time dependency slot."""
     if time_dependency.start is not None:

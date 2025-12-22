@@ -36,6 +36,13 @@ export const api = {
     if (!response.ok) throw new Error('Failed to update todo status');
   },
 
+  async resetTodoTimer(id: number): Promise<void> {
+    const response = await fetch(`${API_BASE}/todos/${id}/reset-timer`, {
+      method: 'POST',
+    });
+    if (!response.ok) throw new Error('Failed to reset todo timer');
+  },
+
   // One-off todos
   async getOneOffTodos(): Promise<OneOffTodo[]> {
     const response = await fetch(`${API_BASE}/oneoff-todos`);

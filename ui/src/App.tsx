@@ -609,6 +609,26 @@ function App() {
         }
     };
 
+    const handleResetTimer = async (id: number) => {
+        try {
+            await api.resetTodoTimer(id);
+            // Optimistically clear local timer data for this todo
+            setCategories(prev => prev.map(cat => ({
+                ...cat,
+                todos: cat.todos.map(t => t.id === id
+                    ? { ...t, cumulative_in_progress_seconds: 0, in_progress_start: null }
+                    : t,
+                ),
+            })));
+            setRecommendedTodos(prev => prev.map(t => t.id === id
+                ? { ...t, cumulative_in_progress_seconds: 0, in_progress_start: null }
+                : t,
+            ));
+        } catch (e) {
+            console.error('Failed to reset timer', e);
+        }
+    };
+
     if (isLoading && !bootstrapped) {
         return (
             <div className="min-h-screen flex items-center justify-center">
@@ -805,8 +825,8 @@ function App() {
                 style={currentTab === 'graph' ? {} : { WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', paddingBottom: `${footerHeight}px` }}
             >
                 <Routes>
-                    <Route path="/all" element={<AllTasksPage categories={categories} summary={summary as any} onStatusChange={handleStatusChange} timeslots={timeslots} />} />
-                    <Route path="/recommended" element={<RecommendedPage todos={recommendedTodos} oneOffs={recommendedOneOffs} onStatusChange={handleStatusChange} onOneOffStatusChange={handleOneOffStatusChange} timeslots={timeslots} />} />
+                    <Route path="/all" element={<AllTasksPage categories={categories} summary={summary as any} onStatusChange={handleStatusChange} timeslots={timeslots} onResetTimer={handleResetTimer} />} />
+                    <Route path="/recommended" element={<RecommendedPage todos={recommendedTodos} oneOffs={recommendedOneOffs} onStatusChange={handleStatusChange} onOneOffStatusChange={handleOneOffStatusChange} timeslots={timeslots} onResetTimer={handleResetTimer} />} />
                     <Route path="/graph" element={<GraphPage />} />
                     <Route path="/reports" element={<ReportsPage />} />
                     <Route path="/settings" element={<SettingsPage />} />

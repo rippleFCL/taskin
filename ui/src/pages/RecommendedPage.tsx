@@ -12,9 +12,10 @@ interface Props {
     onStatusChange: (id: number, status: TaskStatus) => void;
     onOneOffStatusChange?: (id: number, status: TaskStatus) => void;
     timeslots?: Record<number, Timeslot>;
+    onResetTimer: (id: number) => void;
 }
 
-export default function RecommendedPage({ todos, oneOffs = [], onStatusChange, onOneOffStatusChange, timeslots }: Props) {
+export default function RecommendedPage({ todos, oneOffs = [], onStatusChange, onOneOffStatusChange, timeslots, onResetTimer }: Props) {
     if (todos.length === 0 && oneOffs.length === 0) {
         return (
             <div className="bg-background rounded-lg border shadow-sm p-6">
@@ -105,6 +106,19 @@ export default function RecommendedPage({ todos, oneOffs = [], onStatusChange, o
                             <Button key={s} size="sm" variant="outline" className={classes} onClick={() => onStatusChange(todo.id, 'skipped')} aria-label="Mark as skipped"><SkipForward className="w-4 h-4 sm:mr-2 shrink-0" /><span className="hidden sm:inline">Skip</span></Button>
                         );
                     })}
+                    {(Number((todo as any).cumulative_in_progress_seconds || 0) > 0 || todo.status === 'in-progress') && (
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="flex items-center gap-1.5 border"
+                            onClick={() => onResetTimer(todo.id)}
+                            aria-label="Reset in-progress timer"
+                        >
+                            <Clock className="w-4 h-4 sm:mr-2 shrink-0" />
+                            <span className="hidden sm:inline">Reset timer</span>
+                        </Button>
+                    )}
                 </div>
             </div>
         );

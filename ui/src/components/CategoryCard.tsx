@@ -12,8 +12,7 @@ interface CategoryCardProps {
     onStatusChange: (id: number, status: TaskStatus) => void;
     timeslots?: Record<number, Timeslot>;
 }
-
-export function CategoryCard({ category, onStatusChange, timeslots }: CategoryCardProps) {
+export function CategoryCard({ category, onStatusChange, timeslots, onResetTimer }: CategoryCardProps & { onResetTimer?: (id: number) => void }) {
     const [open, setOpen] = useState(true);
     const [tab, setTab] = useState<'open' | 'completed' | 'skipped' | 'notdue'>('open');
 
@@ -142,6 +141,7 @@ export function CategoryCard({ category, onStatusChange, timeslots }: CategoryCa
                                             todo={todo}
                                             onStatusChange={onStatusChange}
                                             timeslot={timeslots ? timeslots[todo.id] : undefined}
+                                            onResetTimer={onResetTimer}
                                         />
                                     ))}
                                 </div>
@@ -157,6 +157,7 @@ export function CategoryCard({ category, onStatusChange, timeslots }: CategoryCa
                                             todo={todo}
                                             onStatusChange={onStatusChange}
                                             timeslot={timeslots ? timeslots[todo.id] : undefined}
+                                            onResetTimer={onResetTimer}
                                         />
                                     ))}
                                 </div>
@@ -172,6 +173,7 @@ export function CategoryCard({ category, onStatusChange, timeslots }: CategoryCa
                                             todo={todo}
                                             onStatusChange={onStatusChange}
                                             timeslot={timeslots ? timeslots[todo.id] : undefined}
+                                            onResetTimer={onResetTimer}
                                         />
                                     ))}
                                 </div>
@@ -186,6 +188,7 @@ export function CategoryCard({ category, onStatusChange, timeslots }: CategoryCa
                                         todo={todo}
                                         onStatusChange={onStatusChange}
                                         timeslot={timeslots ? timeslots[todo.id] : undefined}
+                                        onResetTimer={onResetTimer}
                                     />
                                 ))}
                             </div>

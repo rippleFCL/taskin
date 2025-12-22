@@ -20,8 +20,7 @@ interface Props {
     onStatusChange: (id: number, status: TaskStatus) => void;
     timeslots?: Record<number, Timeslot>;
 }
-
-export default function AllTasksPage({ categories, summary, onStatusChange, timeslots }: Props) {
+export default function AllTasksPage({ categories, summary, onStatusChange, timeslots, onResetTimer }: Props & { onResetTimer: (id: number) => void }) {
     return (
         <div className="space-y-4">
             {/* Summary bar */}
@@ -94,6 +93,7 @@ export default function AllTasksPage({ categories, summary, onStatusChange, time
                         category={category}
                         onStatusChange={onStatusChange}
                         timeslots={timeslots}
+                        onResetTimer={onResetTimer}
                     />
                 ))
             )}

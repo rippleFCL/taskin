@@ -2,7 +2,7 @@ import { Todo, TaskStatus, Timeslot } from '../types';
 import { useEffect, useState } from 'react';
 import { Button } from './ui/button';
 import { cn, statusButtonClasses, statusBadgeClasses } from '../lib/utils';
-import { Check, Circle, CircleDashed, SkipForward, Clock } from 'lucide-react';
+import { Check, Circle, CircleDashed, SkipForward, Clock, RotateCcw } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { TimeslotChip } from './TimeslotChip';
 
@@ -10,9 +10,10 @@ interface TodoItemProps {
     todo: Todo;
     onStatusChange: (id: number, status: TaskStatus) => void;
     timeslot?: Timeslot;
+    onResetTimer?: (id: number) => void;
 }
 
-export function TodoItem({ todo, onStatusChange, timeslot }: TodoItemProps) {
+export function TodoItem({ todo, onStatusChange, timeslot, onResetTimer }: TodoItemProps) {
     const handleStatusChange = (newStatus: TaskStatus) => {
         // Optimistic update delegated to parent
         onStatusChange(todo.id, newStatus);
@@ -165,6 +166,19 @@ export function TodoItem({ todo, onStatusChange, timeslot }: TodoItemProps) {
                         </Button>
                     );
                 })}
+                {onResetTimer && (displaySeconds > 0 || todo.status === 'in-progress') && (
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-1.5 border"
+                        onClick={() => onResetTimer(todo.id)}
+                        aria-label="Reset in-progress timer"
+                    >
+                        <RotateCcw className="w-4 h-4 sm:mr-2 shrink-0" />
+                        <span className="hidden sm:inline">Reset timer</span>
+                    </Button>
+                )}
                 {/* Realtime timer moved next to title to match Recommended page styling */}
             </div>
 
